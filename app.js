@@ -25,6 +25,8 @@
     detailId: document.getElementById("detailId"),
     detailTitle: document.getElementById("detailTitle"),
     imageWrap: document.getElementById("imageWrap"),
+    btnArrowPrev: document.getElementById("btnArrowPrev"),
+    btnArrowNext: document.getElementById("btnArrowNext"),
     btnPrev: document.getElementById("btnPrev"),
     btnNext: document.getElementById("btnNext"),
     btnReveal: document.getElementById("btnReveal"),
@@ -63,6 +65,8 @@
   let touchStartY = 0;
   let touchStartTime = 0;
   let swipeTriggeredByTouch = false;
+  /** 当触摸起点在按钮/箭头等交互元素上时，不要触发滑动翻页 */
+  let swipeIgnoreTouch = false;
   const SWIPE_MIN_X_PX = 45;
   const SWIPE_MAX_TIME_MS = 900;
   const SWIPE_Y_RATIO = 1.3;
@@ -409,6 +413,8 @@
   function setNavDisabled(disabled) {
     if (el.btnPrev) el.btnPrev.disabled = disabled;
     if (el.btnNext) el.btnNext.disabled = disabled;
+    if (el.btnArrowPrev) el.btnArrowPrev.disabled = disabled;
+    if (el.btnArrowNext) el.btnArrowNext.disabled = disabled;
   }
 
   function setKnowDisabled(disabled) {
@@ -813,6 +819,11 @@
 
       el.imageWrap.addEventListener("touchstart", function (e) {
         if (!e.touches || !e.touches[0]) return;
+        swipeIgnoreTouch = Boolean(
+          e.target instanceof Element &&
+            typeof e.target.closest === "function" &&
+            e.target.closest(".image-arrow")
+        );
         const t = e.touches[0];
         touchStartX = t.clientX;
         touchStartY = t.clientY;
@@ -825,6 +836,10 @@
         function (e) {
           if (!e.changedTouches || !e.changedTouches[0]) return;
           if (!items.length) return;
+          if (swipeIgnoreTouch) {
+            swipeIgnoreTouch = false;
+            return;
+          }
           const t = e.changedTouches[0];
           const dx = t.clientX - touchStartX;
           const dy = t.clientY - touchStartY;
@@ -845,6 +860,22 @@
         },
         { passive: true }
       );
+    }
+
+    // 图片左右箭头：上一张 / 下一张
+    if (el.btnArrowPrev) {
+      el.btnArrowPrev.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (!items.length) return;
+        moveBy(-1);
+      });
+    }
+    if (el.btnArrowNext) {
+      el.btnArrowNext.addEventListener("click", function (e) {
+        e.stopPropagation();
+        if (!items.length) return;
+        moveBy(1);
+      });
     }
 
     document.addEventListener("keydown", function (e) {
