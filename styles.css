@@ -509,7 +509,7 @@ body {
   .know-row {
     position: absolute;
     right: 1rem;
-    top: 52%;
+    top: 56%;
     transform: translateY(-50%);
     flex-direction: column;
     flex-wrap: nowrap;
