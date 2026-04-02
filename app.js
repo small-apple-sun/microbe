@@ -866,15 +866,17 @@
     if (el.btnArrowPrev) {
       el.btnArrowPrev.addEventListener("click", function (e) {
         e.stopPropagation();
-        if (!items.length) return;
-        moveBy(-1);
+        e.preventDefault();
+        // 仅作为指示，不主动翻页；翻页仍以左滑/右滑或键盘为主
+        return;
       });
     }
     if (el.btnArrowNext) {
       el.btnArrowNext.addEventListener("click", function (e) {
         e.stopPropagation();
-        if (!items.length) return;
-        moveBy(1);
+        e.preventDefault();
+        // 仅作为指示，不主动翻页；翻页仍以左滑/右滑或键盘为主
+        return;
       });
     }
 
