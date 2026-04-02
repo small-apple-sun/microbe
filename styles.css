@@ -379,6 +379,9 @@ body {
   min-height: 70vh;
   border-radius: 20px;
   border: 1px dashed rgba(124, 63, 32, 0.22);
+  cursor: pointer;
+  /* 允许纵向滚动，同时把水平滑动交给我们的 touchend 逻辑 */
+  touch-action: pan-y;
   background:
     linear-gradient(45deg, rgba(124, 63, 32, 0.04) 25%, transparent 25%) 0 0 / 24px 24px,
     linear-gradient(-45deg, rgba(124, 63, 32, 0.04) 25%, transparent 25%) 0 0 / 24px 24px,

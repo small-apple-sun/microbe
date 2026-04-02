@@ -58,6 +58,14 @@
   let toastTimer = null;
   let toastHideTimer = null;
   let celebrateCleanupTimer = null;
+  /** 手机触摸滑动：左右滑动切换上一/下一张 */
+  let touchStartX = 0;
+  let touchStartY = 0;
+  let touchStartTime = 0;
+  let swipeTriggeredByTouch = false;
+  const SWIPE_MIN_X_PX = 45;
+  const SWIPE_MAX_TIME_MS = 900;
+  const SWIPE_Y_RATIO = 1.3;
   /** 测验模式下连续「会了」次数，点「不会」清零 */
   let quizKnowStreak = 0;
   /** 测验模式下本轮累计「会了」（取消测验模式后清零） */
@@ -790,6 +798,11 @@
     }
     if (el.imageWrap) {
       el.imageWrap.addEventListener("click", function () {
+        // 避免触发滑动手势后，紧随其后的 click 再次翻页/切换答案
+        if (swipeTriggeredByTouch) {
+          swipeTriggeredByTouch = false;
+          return;
+        }
         if (!items.length) return;
         if (quizOn()) {
           toggleReveal();
@@ -797,6 +810,41 @@
           moveBy(1);
         }
       });
+
+      el.imageWrap.addEventListener("touchstart", function (e) {
+        if (!e.touches || !e.touches[0]) return;
+        const t = e.touches[0];
+        touchStartX = t.clientX;
+        touchStartY = t.clientY;
+        touchStartTime = Date.now();
+        swipeTriggeredByTouch = false;
+      });
+
+      el.imageWrap.addEventListener(
+        "touchend",
+        function (e) {
+          if (!e.changedTouches || !e.changedTouches[0]) return;
+          if (!items.length) return;
+          const t = e.changedTouches[0];
+          const dx = t.clientX - touchStartX;
+          const dy = t.clientY - touchStartY;
+          const absDx = Math.abs(dx);
+          const absDy = Math.abs(dy);
+          const elapsed = Date.now() - touchStartTime;
+          if (
+            absDx < SWIPE_MIN_X_PX ||
+            elapsed > SWIPE_MAX_TIME_MS ||
+            absDy > absDx / SWIPE_Y_RATIO
+          ) {
+            return;
+          }
+          // 水平滑动：向左 -> 下一张；向右 -> 上一张
+          swipeTriggeredByTouch = true;
+          if (dx < 0) moveBy(1);
+          else moveBy(-1);
+        },
+        { passive: true }
+      );
     }
 
     document.addEventListener("keydown", function (e) {
