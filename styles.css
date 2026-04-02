@@ -553,6 +553,15 @@ body {
 }
 
 @media (max-width: 980px) {
+  .toolbar {
+    justify-content: flex-start;
+    gap: 0.65rem;
+  }
+
+  .toggle {
+    white-space: nowrap;
+  }
+
   .detail {
     grid-template-columns: 1fr;
     position: relative;
@@ -626,5 +635,10 @@ body {
 
   .topbar {
     padding: 1rem 1rem 0.85rem;
+  }
+
+  /* 手机底部栏可能遮挡 toast，把鼓励词往上抬 */
+  .toast {
+    bottom: 4.2rem;
   }
 }
