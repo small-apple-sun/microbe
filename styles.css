@@ -483,6 +483,7 @@ body {
 @media (max-width: 980px) {
   .detail {
     grid-template-columns: 1fr;
+    position: relative;
   }
 
   .detail-image-wrap {
@@ -502,5 +503,26 @@ body {
     border-top: 1px solid var(--line);
     padding-top: 0.85rem;
     margin-top: 0.5rem;
+  }
+
+  /* 手机单手操作：把「会了/不会」覆盖到图片右侧区域 */
+  .know-row {
+    position: absolute;
+    right: 1rem;
+    top: 52%;
+    transform: translateY(-50%);
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 0.7rem;
+    margin: 0;
+    z-index: 3;
+    padding: 0;
+  }
+
+  .know-row .nav-btn {
+    flex: unset;
+    min-width: 0;
+    width: 7rem;
+    padding: 0.75rem 0.9rem;
   }
 }
