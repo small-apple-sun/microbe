@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>微生物菌落图谱</title>
+    <link rel="stylesheet" href="styles.css?v=20260402m" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Microbe Colony Atlas</p>
+        <h1>微生物菌落图谱</h1>
+      </div>
+      <div class="toolbar">
+        <div class="toolbar-search">
+          <input
+            type="search"
+            id="nameSearch"
+            class="search"
+            placeholder="按菌名筛选…"
+            autocomplete="off"
+            enterkeyhint="search"
+            aria-label="按菌名筛选"
+          />
+          <button type="button" id="btnSearchClear" class="nav-btn nav-btn-compact">
+            清空
+          </button>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="quizMode" />
+          <span>测验模式</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="reviewOnly" />
+          <span>仅复习不会的</span>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="randomOrder" />
+          <span>随机顺序</span>
+        </label>
+        <span id="counter" class="counter">0 / 0</span>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="viewer">
+        <p id="loadError" class="load-error hidden"></p>
+        <div id="viewerEmpty" class="viewer-empty hidden">当前没有可展示图片</div>
+        <p id="searchEmpty" class="viewer-empty search-empty hidden" role="status">
+          没有菌名包含该关键词的条目，请换个词或点「清空」。
+        </p>
+        <p id="reviewEmpty" class="viewer-empty review-empty hidden" role="status">
+          复习池里还没有条目。在全集浏览时点「不会」即可加入；取消勾选「仅复习不会的」可查看全部。
+        </p>
+        <article id="detailCard" class="detail">
+          <div class="detail-image-wrap" id="imageWrap" title="点击切换下一张">
+            <img
+              id="detailImage"
+              class="detail-image"
+              alt=""
+              decoding="async"
+              fetchpriority="high"
+            />
+          </div>
+          <div class="detail-info" id="detailInfo">
+            <div class="detail-head" id="detailHead">
+              <p class="detail-id" id="detailId"></p>
+              <h2 id="detailTitle" class="detail-title"></h2>
+            </div>
+            <div class="detail-controls" id="detailControls">
+              <div id="detailNav" class="detail-nav">
+                <button type="button" id="btnReveal" class="nav-btn nav-btn-reveal" disabled>
+                  显示答案
+                </button>
+                <button type="button" id="btnPrev" class="nav-btn">上一张</button>
+                <button type="button" id="btnNext" class="nav-btn">下一张</button>
+              </div>
+              <div class="know-row">
+                <button type="button" id="btnKnow" class="nav-btn nav-btn-know" title="快捷键 K">
+                  会了
+                </button>
+                <button type="button" id="btnNotKnow" class="nav-btn nav-btn-not-know" title="快捷键 N">
+                  不会
+                </button>
+              </div>
+              <p id="navHint" class="detail-hint">
+                方向键 ← → 翻页；勾选「随机顺序」后上下张按洗牌顺序；普通模式空格下一张；测验模式空格或点击图片显示/隐藏菌名；K 会了、N 不会；测验模式下每累计答对 5 题会有庆贺小动画；搜索框内 Esc 清空
+              </p>
+            </div>
+          </div>
+        </article>
+      </section>
+    </main>
+
+    <div
+      id="celebrateOverlay"
+      class="celebrate-overlay hidden"
+      aria-hidden="true"
+    ></div>
+    <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+    <script src="data/slides.embed.js?v=20260402m"></script>
+    <script src="app.js?v=20260402m"></script>
+  </body>
+</html>
