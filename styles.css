@@ -72,8 +72,8 @@ body {
   flex-wrap: nowrap;
   align-items: center;
   gap: 0.45rem;
-  flex: 0 1 auto;
-  justify-content: flex-end;
+  flex: 1 1 14rem;
+  justify-content: flex-start;
   min-width: 0;
 }
 
