@@ -34,7 +34,7 @@ body {
 .topbar {
   display: flex;
   justify-content: space-between;
-  align-items: end;
+  align-items: flex-start;
   gap: 1rem;
   padding: 1.2rem 1.4rem 1rem;
   border-bottom: 1px solid var(--line);
@@ -46,8 +46,9 @@ body {
 }
 
 .eyebrow {
-  margin: 0 0 0.2rem;
+  margin: -0.1rem 0 0;
   font-size: 0.78rem;
+  line-height: 1.08;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
@@ -68,18 +69,18 @@ body {
 
 .toolbar-search {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: 0.45rem;
-  flex: 1 1 14rem;
+  flex: 0 1 auto;
   justify-content: flex-end;
   min-width: 0;
 }
 
 .toolbar-search .search {
-  flex: 1 1 12rem;
+  flex: 0 1 10.5rem;
   min-width: 0;
-  max-width: min(20rem, 100%);
+  max-width: min(13rem, 100%);
 }
 
 .toggle {
@@ -581,7 +582,7 @@ body {
     position: absolute;
     left: 50%;
     right: auto;
-    top: 70%;
+    top: 73%;
     transform: translate(-50%, -50%);
     flex-direction: row;
     flex-wrap: nowrap;
