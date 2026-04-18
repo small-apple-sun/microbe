@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>微生物菌落图谱</title>
-    <link rel="stylesheet" href="styles.css?v=20260402v" />
+    <link rel="stylesheet" href="styles.css?v=20260426c" />
   </head>
   <body>
     <header class="topbar">
@@ -38,6 +38,15 @@
           <input type="checkbox" id="randomOrder" />
           <span>随机顺序</span>
         </label>
+        <button type="button" id="btnFeaturePanel" class="nav-btn nav-btn-compact">
+          特征查询
+        </button>
+        <button type="button" id="btnExamPanel" class="nav-btn nav-btn-compact">
+          考试
+        </button>
+        <button type="button" id="btnAgentPanel" class="nav-btn nav-btn-compact">
+          智能讲解
+        </button>
         <span id="counter" class="counter">0 / 0</span>
       </div>
     </header>
@@ -87,6 +96,10 @@
               <p class="detail-id" id="detailId"></p>
               <h2 id="detailTitle" class="detail-title"></h2>
             </div>
+            <div class="detail-about-wrap hidden" id="detailAboutWrap">
+              <p class="detail-about-label">菌种介绍</p>
+              <p class="detail-about" id="detailAbout"></p>
+            </div>
             <div class="detail-controls" id="detailControls">
               <div class="know-row">
                 <button
@@ -121,7 +134,246 @@
     ></div>
     <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 
+    <div
+      id="featureDrawer"
+      class="feature-drawer hidden"
+      aria-hidden="true"
+    >
+      <button
+        type="button"
+        class="feature-drawer-backdrop"
+        id="featureBackdrop"
+        aria-label="关闭特征查询"
+        tabindex="-1"
+      ></button>
+      <div
+        class="feature-drawer-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="featureDrawerTitle"
+      >
+        <div class="feature-drawer-head">
+          <h2 id="featureDrawerTitle" class="feature-drawer-title">菌种特征查询</h2>
+          <button type="button" id="btnFeatureClose" class="nav-btn nav-btn-compact">
+            关闭
+          </button>
+        </div>
+        <p class="feature-drawer-hint">
+          下列为本图谱中出现的菌名（去重）。可按菌名或介绍正文中的词筛选；点击一行跳转到该菌的菌落图。
+        </p>
+        <div class="feature-search-row">
+          <input
+            type="search"
+            id="featureSearch"
+            class="search feature-search"
+            placeholder="菌名或特征关键词…"
+            autocomplete="off"
+            aria-label="筛选菌种特征"
+          />
+          <button type="button" id="btnFeatureSearchClear" class="nav-btn nav-btn-compact">
+            清空
+          </button>
+        </div>
+        <p id="featureEmpty" class="feature-empty hidden" role="status">没有匹配的菌种</p>
+        <div id="featureList" class="feature-list"></div>
+      </div>
+    </div>
+
+    <div id="examDrawer" class="exam-drawer hidden" aria-hidden="true">
+      <button
+        type="button"
+        class="exam-drawer-backdrop"
+        id="examBackdrop"
+        aria-label="关闭考试"
+        tabindex="-1"
+      ></button>
+      <div
+        class="exam-drawer-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="examDrawerTitle"
+      >
+        <div class="exam-drawer-head">
+          <h2 id="examDrawerTitle" class="exam-drawer-title">菌落识别考试</h2>
+          <button type="button" id="btnExamClose" class="nav-btn nav-btn-compact">
+            关闭
+          </button>
+        </div>
+        <p class="exam-drawer-hint" id="examDrawerHint">
+          每题点选后立即进入下一题，答完第 10 题自动交卷并显示得分与错题回顾。题目从当前筛选与复习条件中一次随机抽取且不重复；「重置」或「再来一组」会重新洗牌抽题。干扰项菌名来自全库。
+        </p>
+        <div id="examPlay" class="exam-play">
+          <div id="examImageWrap" class="exam-image-wrap">
+            <img id="examImage" class="exam-image" alt="" decoding="async" />
+          </div>
+          <div id="examChoices" class="exam-choices" role="group" aria-label="选项"></div>
+          <p id="examFeedback" class="exam-feedback hidden" role="status" aria-live="polite"></p>
+          <p id="examScoreLine" class="exam-score-line" aria-live="polite"></p>
+          <div class="exam-actions">
+            <button type="button" id="btnExamNext" class="nav-btn hidden" disabled>
+              下一题
+            </button>
+            <button type="button" id="btnExamSubmit" class="nav-btn hidden" disabled>
+              提交
+            </button>
+            <button type="button" id="btnExamReset" class="nav-btn nav-btn-compact">
+              重置（重新抽题）
+            </button>
+          </div>
+        </div>
+        <div id="examResults" class="exam-results hidden" aria-hidden="true">
+          <h3 class="exam-results-title">交卷结果</h3>
+          <p id="examResultsSummary" class="exam-results-summary"></p>
+          <div id="examWrongList" class="exam-wrong-list"></div>
+          <div class="exam-results-actions">
+            <button type="button" id="btnExamAgain" class="nav-btn">再来一组</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="chatDrawer" class="agent-drawer hidden" aria-hidden="true">
+      <button
+        type="button"
+        class="agent-drawer-backdrop"
+        id="chatBackdrop"
+        aria-label="关闭智能讲解"
+        tabindex="-1"
+      ></button>
+      <div
+        class="agent-drawer-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="chatDrawerTitle"
+      >
+        <div class="agent-drawer-head">
+          <h2 id="chatDrawerTitle" class="agent-drawer-title">智能讲解</h2>
+          <button type="button" id="btnChatClose" class="nav-btn nav-btn-compact">
+            关闭
+          </button>
+        </div>
+        <p class="agent-disclaimer">
+          内容由公网大模型生成，仅供参观与教学辅助，不能替代规范鉴定与临床决策。
+        </p>
+        <details class="agent-settings" id="chatSettings">
+          <summary class="agent-settings-summary">连接设置（保存在本机浏览器）</summary>
+          <div class="agent-settings-body">
+            <fieldset class="agent-mode-fieldset">
+              <legend class="agent-field-label">调用方式</legend>
+              <label class="agent-mode-option">
+                <input type="radio" name="chatMode" id="chatModeWorker" value="worker" checked />
+                自建代理（Cloudflare Worker，推荐）
+              </label>
+              <label class="agent-mode-option">
+                <input type="radio" name="chatMode" id="chatModeDirect" value="deepseek_direct" />
+                直连 DeepSeek（不部署 Worker，可能被浏览器拦截）
+              </label>
+            </fieldset>
+            <div id="chatSettingModelWrap" class="hidden">
+              <label class="agent-field-label" for="chatSettingModel">DeepSeek 模型</label>
+              <select id="chatSettingModel" class="agent-field-input agent-field-select">
+                <option value="deepseek-chat">deepseek-chat（非思考）</option>
+                <option value="deepseek-reasoner">deepseek-reasoner（思考）</option>
+              </select>
+            </div>
+            <label class="agent-field-label" for="chatSettingUrl">对话服务 POST 地址（HTTPS）</label>
+            <input
+              type="text"
+              id="chatSettingUrl"
+              class="agent-field-input"
+              placeholder="https://你的代理.workers.dev"
+              inputmode="url"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <p id="chatSettingUrlHint" class="agent-field-hint" aria-live="polite"></p>
+            <label class="agent-field-label" for="chatSettingKey"
+              >API 密钥（可选，DeepSeek 填控制台申请的 Key）</label>
+            <input
+              type="password"
+              id="chatSettingKey"
+              class="agent-field-input"
+              placeholder="sk-… 或留空"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <p id="chatSettingKeyStatus" class="agent-field-hint" aria-live="polite"></p>
+            <p class="agent-field-warn">
+              密钥与地址仅写入当前浏览器本地存储；公用电脑请勿填写。密钥随请求发往您填写的代理；代理需在服务端开启
+              TRUST_CLIENT_KEYS=1 才会使用（公开展示的共享代理请勿开启）。
+            </p>
+            <p class="agent-field-deepseek">
+              <strong>DeepSeek（与官方 OpenAI 兼容格式，见</strong>
+              <a
+                href="https://api-docs.deepseek.com/zh-cn/"
+                target="_blank"
+                rel="noopener noreferrer"
+                >DeepSeek API 文档</a><strong>）：</strong>
+            </p>
+            <ol class="agent-field-steps">
+              <li>
+                <strong>不想部署 Worker</strong>：选择「直连 DeepSeek」，填写并保存
+                <strong>API 密钥</strong>即可（请求发往
+                <code>api.deepseek.com</code>）。若浏览器拦截跨域，再改回「自建代理」。
+              </li>
+              <li>
+                <strong>自建代理</strong>：选择「自建代理」，在「POST 地址」填
+                <strong>Cloudflare Worker</strong> 的 HTTPS（如
+                <code>https://xxx.workers.dev</code>），不要填
+                <code>api.deepseek.com</code>。
+              </li>
+              <li>
+                <strong>（仅自建代理）</strong><strong>Worker 环境变量</strong>（控制台或 wrangler）：
+                <code>UPSTREAM_CHAT_URL</code> 填官方示例之一：
+                <code>https://api.deepseek.com/chat/completions</code>
+                或 <code>https://api.deepseek.com/v1/chat/completions</code>；
+                <code>OPENAI_MODEL</code> 填 <code>deepseek-chat</code>（或文档中的
+                <code>deepseek-reasoner</code> 等）。
+              </li>
+              <li>
+                <strong>（仅自建代理）</strong><strong>密钥二选一：</strong>在 Worker 用
+                <code>wrangler secret put OPENAI_API_KEY</code> 存入 DeepSeek 的 Key；或在页面「API
+                密钥」填写并保存，且 Worker 设置 <code>TRUST_CLIENT_KEYS=1</code>（仅自用，公开展示勿开）。
+              </li>
+            </ol>
+            <div class="agent-settings-actions">
+              <button type="button" id="btnChatSettingSave" class="nav-btn">
+                保存连接设置
+              </button>
+              <button type="button" id="btnChatSettingTest" class="nav-btn nav-btn-compact">
+                测试连接
+              </button>
+              <button type="button" id="btnChatSettingClear" class="nav-btn nav-btn-compact">
+                清除本机保存
+              </button>
+            </div>
+            <p id="chatSettingTestStatus" class="agent-field-hint" aria-live="polite"></p>
+          </div>
+        </details>
+        <p id="chatContextBanner" class="agent-context-banner" aria-live="polite"></p>
+        <p id="chatApiHint" class="agent-api-hint hidden" role="status"></p>
+        <div id="chatMessages" class="agent-messages" role="log"></div>
+        <div class="agent-input-row">
+          <textarea
+            id="chatInput"
+            class="agent-input"
+            rows="2"
+            placeholder="结合当前图谱提问…（Enter 发送，Shift+Enter 换行）"
+            aria-label="提问内容"
+          ></textarea>
+          <div class="agent-input-actions">
+            <button type="button" id="btnChatClear" class="nav-btn nav-btn-compact">
+              清空对话
+            </button>
+            <button type="button" id="btnChatSend" class="nav-btn">发送</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <script src="data/slides.embed.js?v=20260402q"></script>
-    <script src="app.js?v=20260402q"></script>
+    <script src="data/microbe_intros.embed.js?v=20260418q"></script>
+    <script src="js/chat-config.js?v=20260420q"></script>
+    <script src="app.js?v=20260426c"></script>
   </body>
 </html>

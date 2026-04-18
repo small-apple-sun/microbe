@@ -14,6 +14,8 @@ OUTPUT_DIR = ROOT / "assets" / "processed"
 DATA_DIR = ROOT / "data"
 JSON_PATH = DATA_DIR / "slides.json"
 EMBED_PATH = DATA_DIR / "slides.embed.js"
+INTROS_JSON_PATH = DATA_DIR / "microbe_intros.json"
+INTROS_EMBED_PATH = DATA_DIR / "microbe_intros.embed.js"
 MAX_DIM = 1100
 WEBP_QUALITY = 74
 
@@ -251,6 +253,25 @@ def write_embed(data: List[Dict[str, str]]) -> None:
     )
 
 
+def write_intros_embed_if_present() -> None:
+    """若存在 microbe_intros.json，则生成 file:// 可用的内嵌介绍脚本。"""
+    if not INTROS_JSON_PATH.is_file():
+        return
+    try:
+        raw = INTROS_JSON_PATH.read_text(encoding="utf-8")
+        obj = json.loads(raw)
+    except (OSError, json.JSONDecodeError):
+        return
+    if not isinstance(obj, dict):
+        return
+    INTROS_EMBED_PATH.write_text(
+        "window.__COLONY_INTROS__ = "
+        + json.dumps(obj, ensure_ascii=False, indent=2)
+        + ";\n",
+        encoding="utf-8",
+    )
+
+
 def process_one(src: Path, index: int) -> Dict[str, str]:
     stem = src.stem
     radius_scale = float(RADIUS_SCALE_BY_STEM.get(stem, 1.0))
@@ -302,6 +323,7 @@ def main() -> int:
 
     JSON_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     write_embed(data)
+    write_intros_embed_if_present()
 
     print(f"完成，共生成 {len(data)} 张透明平板图")
     print(f"数据文件: {JSON_PATH}")
