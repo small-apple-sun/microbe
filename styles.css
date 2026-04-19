@@ -31,6 +31,36 @@ body {
     linear-gradient(180deg, #f7f3ec 0%, #efe7dc 100%);
 }
 
+/* 无障碍：键盘用户可跳到主内容，跳过顶栏 */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0.5rem;
+  z-index: 2000;
+  padding: 0.55rem 1rem;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.92rem;
+  text-decoration: none;
+  box-shadow: 0 2px 12px var(--shadow);
+}
+
+.skip-link:focus {
+  left: 0.75rem;
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+#main-content:focus {
+  outline: none;
+}
+
+#main-content:focus-visible {
+  outline: 2px dashed rgba(124, 63, 32, 0.45);
+  outline-offset: 4px;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -586,6 +616,18 @@ body {
   display: none !important;
 }
 
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* 菌种特征查询抽屉 */
 .feature-drawer {
   position: fixed;
@@ -879,6 +921,306 @@ body {
   gap: 0.45rem;
   justify-content: flex-end;
   margin-top: 0.35rem;
+}
+
+/* 交卷后学习反馈小结 */
+.exam-learning-summary {
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid rgba(124, 63, 32, 0.18);
+  background: rgba(255, 252, 247, 0.95);
+}
+
+.exam-learning-summary[hidden] {
+  display: none !important;
+}
+
+.exam-learning-summary-title {
+  margin: 0 0 0.5rem;
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.exam-learning-summary-body {
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text);
+}
+
+.exam-learning-line {
+  margin: 0 0 0.45rem;
+}
+
+.exam-learning-list {
+  margin: 0.25rem 0 0.5rem;
+  padding-left: 1.25rem;
+}
+
+.exam-learning-list li {
+  margin-bottom: 0.2rem;
+}
+
+.exam-learning-tip {
+  margin: 0.5rem 0 0;
+  padding: 0.5rem 0.55rem;
+  border-radius: 8px;
+  background: rgba(124, 63, 32, 0.06);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+/* 智能讲解：题型化快捷入口 */
+.chat-quick-prompts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.35rem 0 0.5rem;
+  flex-shrink: 0;
+}
+
+.chat-quick-btn {
+  margin: 0;
+  padding: 0.45rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(124, 63, 32, 0.28);
+  background: rgba(255, 255, 255, 0.9);
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--accent);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.chat-quick-btn:hover {
+  background: #fff;
+  border-color: rgba(124, 63, 32, 0.42);
+}
+
+.chat-quick-btn:focus-visible {
+  outline: 2px solid rgba(124, 63, 32, 0.45);
+  outline-offset: 2px;
+}
+
+.exam-student-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  margin: 0 0 0.75rem;
+  flex-shrink: 0;
+}
+
+.exam-student-label {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.exam-student-input {
+  flex: 1 1 12rem;
+  min-width: 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  font: inherit;
+  font-size: 0.88rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text);
+}
+
+.exam-student-input:focus {
+  outline: 2px solid rgba(124, 63, 32, 0.26);
+  border-color: rgba(124, 63, 32, 0.36);
+}
+
+/* 成绩统计抽屉（教师） */
+.score-board-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 103;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  pointer-events: none;
+}
+
+.score-board-drawer:not(.hidden) {
+  pointer-events: auto;
+}
+
+.score-board-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: rgba(42, 36, 29, 0.4);
+  cursor: pointer;
+}
+
+.score-board-panel {
+  position: relative;
+  z-index: 1;
+  width: min(36rem, 100vw);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel-strong);
+  border-left: 1px solid var(--line);
+  box-shadow: -8px 0 32px var(--shadow);
+  padding: 1rem 1.1rem 1.2rem;
+  overflow: hidden;
+}
+
+.score-board-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
+.score-board-title {
+  margin: 0;
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.score-board-disclaimer {
+  margin: 0.55rem 0 0.65rem;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.score-board-gate {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.score-board-main {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.score-board-label {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text);
+  width: 100%;
+}
+
+.score-board-input {
+  padding: 0.55rem 0.75rem;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  font: inherit;
+  font-size: 0.88rem;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text);
+}
+
+.score-board-input:focus {
+  outline: 2px solid rgba(124, 63, 32, 0.26);
+  border-color: rgba(124, 63, 32, 0.36);
+}
+
+.score-board-filter {
+  flex: 1 1 10rem;
+  min-width: 0;
+}
+
+.score-board-error {
+  width: 100%;
+  margin: 0.25rem 0 0;
+  font-size: 0.82rem;
+  color: #8f2d14;
+}
+
+.score-board-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.65rem;
+  flex-shrink: 0;
+}
+
+.score-board-toolbar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.score-board-table-wrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.score-board-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.84rem;
+}
+
+.score-board-table th,
+.score-board-table td {
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.score-board-table th {
+  background: rgba(124, 63, 32, 0.08);
+  font-weight: 600;
+  color: var(--text);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.score-board-table tr:last-child td {
+  border-bottom: none;
+}
+
+.score-board-empty {
+  margin: 0.75rem;
+  font-size: 0.86rem;
+  color: var(--muted);
+}
+
+.score-board-teacher-pin {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 10px;
+  border: 1px dashed var(--line);
+  font-size: 0.84rem;
+  flex-shrink: 0;
+}
+
+.score-board-pin-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.45rem;
 }
 
 .exam-image-wrap {
@@ -1355,8 +1697,28 @@ body {
     gap: 0.65rem;
   }
 
+  /* 移动端：增大可点区域（约 44×44px） */
+  .toolbar .nav-btn,
+  .exam-drawer .nav-btn,
+  .exam-choice,
+  .feature-drawer .nav-btn {
+    min-height: 44px;
+    padding-inline: 0.75rem;
+  }
+
+  .chat-quick-btn {
+    min-height: 44px;
+    padding: 0.5rem 0.85rem;
+    font-size: 0.88rem;
+  }
+
   .toggle {
     white-space: nowrap;
+  }
+
+  .toggle input {
+    width: 1.1rem;
+    height: 1.1rem;
   }
 
   .detail {
@@ -1457,6 +1819,22 @@ body {
     max-height: 90vh;
     border-left: none;
     border-radius: 18px 18px 0 0;
+  }
+
+  .score-board-drawer {
+    justify-content: center;
+  }
+
+  .score-board-panel {
+    width: 100%;
+    margin-top: auto;
+    max-height: 92vh;
+    border-left: none;
+    border-radius: 18px 18px 0 0;
+  }
+
+  .score-board-drawer .nav-btn {
+    min-height: 44px;
   }
 }
 

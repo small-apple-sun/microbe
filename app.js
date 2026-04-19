@@ -25,6 +25,12 @@
   const QUIZ_CELEBRATE_EVERY = 5;
   /** 菌落识别考试：固定题量 */
   const EXAM_TOTAL = 10;
+  /** 本机存储：历次交卷成绩（教师端查看） */
+  const EXAM_SCORES_STORAGE_KEY = "microbeColonyAtlas_examScores";
+  /** 本机记住考试前填写的学号/昵称 */
+  const EXAM_STUDENT_LABEL_STORAGE_KEY = "microbeColonyAtlas_examStudentLabel";
+  /** 教师查看成绩面板的密码（可被 js/score-board-config.js 与本地保存覆盖） */
+  const TEACHER_PIN_STORAGE_KEY = "microbeColonyAtlas_teacherPin";
 
   const el = {
     counter: document.getElementById("counter"),
@@ -81,6 +87,30 @@
     btnExamSubmit: document.getElementById("btnExamSubmit"),
     btnExamReset: document.getElementById("btnExamReset"),
     btnExamAgain: document.getElementById("btnExamAgain"),
+    examLearningSummary: document.getElementById("examLearningSummary"),
+    examLearningSummaryBody: document.getElementById("examLearningSummaryBody"),
+    btnExamExportWrong: document.getElementById("btnExamExportWrong"),
+    examStudentId: document.getElementById("examStudentId"),
+    chatQuickPrompts: document.getElementById("chatQuickPrompts"),
+    btnScoreBoard: document.getElementById("btnScoreBoard"),
+    scoreBoardDrawer: document.getElementById("scoreBoardDrawer"),
+    scoreBoardBackdrop: document.getElementById("scoreBoardBackdrop"),
+    btnScoreBoardClose: document.getElementById("btnScoreBoardClose"),
+    scoreBoardGate: document.getElementById("scoreBoardGate"),
+    scoreBoardPin: document.getElementById("scoreBoardPin"),
+    scoreBoardPinError: document.getElementById("scoreBoardPinError"),
+    btnScoreBoardUnlock: document.getElementById("btnScoreBoardUnlock"),
+    scoreBoardMain: document.getElementById("scoreBoardMain"),
+    scoreBoardFilter: document.getElementById("scoreBoardFilter"),
+    scoreBoardTableBody: document.getElementById("scoreBoardTableBody"),
+    scoreBoardEmpty: document.getElementById("scoreBoardEmpty"),
+    btnScoreBoardExport: document.getElementById("btnScoreBoardExport"),
+    btnScoreBoardImport: document.getElementById("btnScoreBoardImport"),
+    scoreBoardFile: document.getElementById("scoreBoardFile"),
+    btnScoreBoardClear: document.getElementById("btnScoreBoardClear"),
+    btnScoreBoardLock: document.getElementById("btnScoreBoardLock"),
+    teacherPinNew: document.getElementById("teacherPinNew"),
+    btnTeacherPinSave: document.getElementById("btnTeacherPinSave"),
     chatDrawer: document.getElementById("chatDrawer"),
     chatBackdrop: document.getElementById("chatBackdrop"),
     chatMessages: document.getElementById("chatMessages"),
@@ -93,17 +123,11 @@
     btnChatClear: document.getElementById("btnChatClear"),
     chatSettings: document.getElementById("chatSettings"),
     chatSettingUrl: document.getElementById("chatSettingUrl"),
-    chatSettingUrlHint: document.getElementById("chatSettingUrlHint"),
     chatSettingKey: document.getElementById("chatSettingKey"),
-    chatSettingKeyStatus: document.getElementById("chatSettingKeyStatus"),
     btnChatSettingSave: document.getElementById("btnChatSettingSave"),
     btnChatSettingTest: document.getElementById("btnChatSettingTest"),
     btnChatSettingClear: document.getElementById("btnChatSettingClear"),
     chatSettingTestStatus: document.getElementById("chatSettingTestStatus"),
-    chatModeWorker: document.getElementById("chatModeWorker"),
-    chatModeDirect: document.getElementById("chatModeDirect"),
-    chatSettingModelWrap: document.getElementById("chatSettingModelWrap"),
-    chatSettingModel: document.getElementById("chatSettingModel"),
   };
 
   /** 按菌名（与 slides 中 title 一致）索引的简介文案 */
@@ -165,6 +189,8 @@
   let chatHistory = [];
   let chatSending = false;
   let chatTesting = false;
+  /** 本页会话内是否已通过密码进入成绩面板 */
+  let scoreBoardViewUnlocked = false;
 
   function quizOn() {
     return Boolean(el.quizMode && el.quizMode.checked);
@@ -372,6 +398,10 @@
   }
 
   function setFeatureDrawer(open) {
+    if (open && el.scoreBoardDrawer) {
+      el.scoreBoardDrawer.classList.add("hidden");
+      el.scoreBoardDrawer.setAttribute("aria-hidden", "true");
+    }
     if (open && el.chatDrawer) {
       chatDrawerOpen = false;
       el.chatDrawer.classList.add("hidden");
@@ -416,7 +446,25 @@
   }
 
   function isDeepseekDirectMode() {
+    if (getWorkerProxyUrl()) return false;
     return getChatMode() === "deepseek_direct";
+  }
+
+  /** 保存地址/密钥后：有可用代理则走代理，否则在已存密钥时走直连 DeepSeek */
+  function syncChatModeAfterSave() {
+    try {
+      if (getWorkerProxyUrl()) {
+        localStorage.removeItem(CHAT_MODE_STORAGE_KEY);
+        return;
+      }
+      if (getStoredOpenaiKeyForRequest()) {
+        localStorage.setItem(CHAT_MODE_STORAGE_KEY, "deepseek_direct");
+      } else {
+        localStorage.removeItem(CHAT_MODE_STORAGE_KEY);
+      }
+    } catch (e) {
+      /* ignore */
+    }
   }
 
   /** 自建代理（Worker）地址；直连模式不使用 */
@@ -489,7 +537,7 @@
     if (el.btnChatSettingTest) {
       el.btnChatSettingTest.disabled =
         !chatCanSend() || Boolean(chatSending) || Boolean(chatTesting);
-      el.btnChatSettingTest.textContent = chatTesting ? "测试中…" : "测试连接";
+      el.btnChatSettingTest.textContent = chatTesting ? "测试中…" : "测试";
     }
     if (el.btnChatClear) {
       el.btnChatClear.disabled = Boolean(chatSending) || Boolean(chatTesting);
@@ -506,41 +554,6 @@
     }
   }
 
-  function updateChatModeUi() {
-    const direct = isDeepseekDirectMode();
-    if (el.chatModeWorker) el.chatModeWorker.checked = !direct;
-    if (el.chatModeDirect) el.chatModeDirect.checked = direct;
-    setChatSettingTestStatus("");
-    if (el.chatSettingUrlHint) {
-      el.chatSettingUrlHint.textContent = direct
-        ? "直连时实际请求发往 DeepSeek 官方；此处可预先填写或保留 Worker 地址，切回「自建代理」后即生效。"
-        : "";
-    }
-    if (el.chatSettingModelWrap) {
-      el.chatSettingModelWrap.classList.toggle("hidden", !direct);
-    }
-    if (el.chatSettingModel) {
-      el.chatSettingModel.value = getDeepseekModel();
-    }
-  }
-
-  function persistChatModeFromUi() {
-    if (!el.chatModeWorker || !el.chatModeDirect) return;
-    const direct = Boolean(el.chatModeDirect.checked);
-    try {
-      if (direct) {
-        localStorage.setItem(CHAT_MODE_STORAGE_KEY, "deepseek_direct");
-      } else {
-        localStorage.removeItem(CHAT_MODE_STORAGE_KEY);
-      }
-    } catch (e) {
-      /* ignore */
-    }
-    setChatSettingTestStatus("");
-    updateChatModeUi();
-    refreshChatChrome();
-  }
-
   function getStoredOpenaiKeyForRequest() {
     try {
       const k = localStorage.getItem(CHAT_OPENAI_KEY_STORAGE_KEY);
@@ -550,10 +563,6 @@
     }
   }
 
-  function hasStoredOpenaiKey() {
-    return Boolean(getStoredOpenaiKeyForRequest());
-  }
-
   function populateChatSettingsForm() {
     if (el.chatSettingUrl) {
       el.chatSettingUrl.value = getLocalSavedChatUrl();
@@ -561,18 +570,7 @@
     if (el.chatSettingKey) {
       el.chatSettingKey.value = "";
     }
-    updateChatModeUi();
-    if (el.chatSettingKeyStatus) {
-      if (isDeepseekDirectMode()) {
-        el.chatSettingKeyStatus.textContent = hasStoredOpenaiKey()
-          ? "直连模式：已保存 DeepSeek API 密钥。"
-          : "直连模式：须填写并保存 DeepSeek 的 API 密钥（sk- 开头）。";
-      } else {
-        el.chatSettingKeyStatus.textContent = hasStoredOpenaiKey()
-          ? "已在本机保存 API 密钥；更换请重新输入并点「保存」；留空保存则沿用原密钥。"
-          : "未保存 API 密钥。若代理端已配置密钥可留空。";
-      }
-    }
+    setChatSettingTestStatus("");
   }
 
   function saveChatSettings() {
@@ -583,29 +581,23 @@
       ? String(el.chatSettingKey.value || "").trim()
       : "";
     try {
-      const directMode = isDeepseekDirectMode();
       if (rawUrl) {
         if (!/^https?:\/\//i.test(rawUrl)) {
-          showToast("地址需为 http:// 或 https:// 开头", 2200);
+          showToast("地址需以 http:// 或 https:// 开头", 2200);
           return;
         }
         localStorage.setItem(CHAT_API_URL_STORAGE_KEY, rawUrl);
-      } else if (!directMode) {
+      } else {
         localStorage.removeItem(CHAT_API_URL_STORAGE_KEY);
       }
       if (rawKey) {
         localStorage.setItem(CHAT_OPENAI_KEY_STORAGE_KEY, rawKey);
       }
-      if (el.chatSettingModel && isDeepseekDirectMode()) {
-        const mv = String(el.chatSettingModel.value || "").trim();
-        if (mv === "deepseek-reasoner" || mv === "deepseek-chat") {
-          localStorage.setItem(CHAT_DEEPSEEK_MODEL_STORAGE_KEY, mv);
-        }
-      }
+      syncChatModeAfterSave();
       if (el.chatSettingKey) el.chatSettingKey.value = "";
       setChatSettingTestStatus("");
       populateChatSettingsForm();
-      showToast("连接设置已保存到本机浏览器", 2200);
+      showToast("已保存", 1800);
       refreshChatChrome();
     } catch (e) {
       showToast("无法写入本地存储", 2400);
@@ -621,15 +613,17 @@
     } catch (e) {
       /* ignore */
     }
-    if (el.chatModeWorker) el.chatModeWorker.checked = true;
-    if (el.chatModeDirect) el.chatModeDirect.checked = false;
     setChatSettingTestStatus("");
     populateChatSettingsForm();
-    showToast("已清除本机保存的地址、密钥与直连选项", 2200);
+    showToast("已清除", 2000);
     refreshChatChrome();
   }
 
   function setChatDrawer(open) {
+    if (open && el.scoreBoardDrawer) {
+      el.scoreBoardDrawer.classList.add("hidden");
+      el.scoreBoardDrawer.setAttribute("aria-hidden", "true");
+    }
     if (open && el.featureDrawer) {
       featureDrawerOpen = false;
       el.featureDrawer.classList.add("hidden");
@@ -651,10 +645,10 @@
       refreshChatChrome();
       setTimeout(function () {
         if (!chatCanSend()) {
-          if (isDeepseekDirectMode() && el.chatSettingKey) {
-            el.chatSettingKey.focus();
-          } else if (!isDeepseekDirectMode() && el.chatSettingUrl) {
+          if (el.chatSettingUrl && !getWorkerProxyUrl()) {
             el.chatSettingUrl.focus();
+          } else if (el.chatSettingKey) {
+            el.chatSettingKey.focus();
           }
         } else if (el.chatInput) {
           el.chatInput.focus();
@@ -695,6 +689,7 @@
 
   function showExamPlayUi() {
     if (el.examPlay) el.examPlay.classList.remove("hidden");
+    if (el.examLearningSummary) el.examLearningSummary.hidden = true;
     if (el.examResults) {
       el.examResults.classList.add("hidden");
       el.examResults.setAttribute("aria-hidden", "true");
@@ -707,6 +702,439 @@
       el.examResults.classList.remove("hidden");
       el.examResults.setAttribute("aria-hidden", "false");
     }
+  }
+
+  /** 题型化快捷提问模板（填入输入框，由用户发送） */
+  var CHAT_QUICK_TEMPLATES = {
+    jianbie:
+      "请根据本站【当前图谱条目】的文字资料，列出该菌落形态的鉴别要点（肉眼可见特征），并指出易混淆项及区分思路。资料未写明的内容请勿臆测。",
+    hunxiao:
+      "请结合本站资料，将当前菌种与常见易混菌从菌落形态（大小、色素、溶血、边缘等）作对比，分条说明。未收录于本站资料的内容请标明为通识补充。",
+    fuxi: "请用简洁的要点列表总结当前条目的复习要点，便于考前快速回顾。",
+  };
+
+  function applyChatQuickTemplate(templateKey) {
+    const t = CHAT_QUICK_TEMPLATES[templateKey];
+    if (!t || !el.chatInput) return;
+    if (!getCurrentItem()) {
+      showToast("请先浏览一张菌落图，再使用快捷提问。", 2400);
+      return;
+    }
+    el.chatInput.value = t;
+    setChatDrawer(true);
+    setTimeout(function () {
+      try {
+        if (el.chatInput) el.chatInput.focus();
+      } catch (e) {
+        /* ignore */
+      }
+    }, 0);
+  }
+
+  function renderExamLearningSummary() {
+    if (!el.examLearningSummary || !el.examLearningSummaryBody) return;
+    if (examPhase !== "results" || examRecords.length !== EXAM_TOTAL) {
+      el.examLearningSummary.hidden = true;
+      return;
+    }
+    el.examLearningSummary.hidden = false;
+    const c = examSession.correct;
+    const wrongs = examRecords.filter(function (r) {
+      return !r.ok;
+    });
+    const pct = Math.round((c / EXAM_TOTAL) * 100);
+    el.examLearningSummaryBody.innerHTML = "";
+
+    const p1 = document.createElement("p");
+    p1.className = "exam-learning-line";
+    p1.textContent =
+      "本场共 " +
+      EXAM_TOTAL +
+      " 题，答对 " +
+      c +
+      " 题，正确率约 " +
+      pct +
+      "%。";
+    el.examLearningSummaryBody.appendChild(p1);
+
+    if (wrongs.length) {
+      const p2 = document.createElement("p");
+      p2.className = "exam-learning-line";
+      p2.textContent = "错题 " + wrongs.length + " 道，涉及菌种：";
+      el.examLearningSummaryBody.appendChild(p2);
+      const ul = document.createElement("ul");
+      ul.className = "exam-learning-list";
+      const seen = new Set();
+      wrongs.forEach(function (r) {
+        const title = r.item && r.item.title ? String(r.item.title).trim() : "";
+        if (!title || seen.has(title)) return;
+        seen.add(title);
+        const li = document.createElement("li");
+        li.textContent = title;
+        ul.appendChild(li);
+      });
+      el.examLearningSummaryBody.appendChild(ul);
+      const p3 = document.createElement("p");
+      p3.className = "exam-learning-tip";
+      p3.textContent =
+        "建议：可在下方错题卡片中使用「智能讲解」，或点击「导出错题本」保存记录，复习后再考一次。";
+      el.examLearningSummaryBody.appendChild(p3);
+    } else {
+      const pz = document.createElement("p");
+      pz.className = "exam-learning-tip";
+      pz.textContent =
+        "建议：可尝试勾选「仅复习不会的」巩固薄弱项，或使用「特征查询」扩展对比，再来一组随机题。";
+      el.examLearningSummaryBody.appendChild(pz);
+    }
+  }
+
+  function exportExamWrongMarkdown() {
+    if (examPhase !== "results" || examRecords.length !== EXAM_TOTAL) {
+      showToast("请先完成考试并停留在交卷结果页。", 2400);
+      return;
+    }
+    const lines = [];
+    lines.push("# 微生物菌落图谱 · 本场考试记录");
+    lines.push("");
+    lines.push("- 导出时间：" + new Date().toLocaleString("zh-CN"));
+    lines.push(
+      "- 成绩：" + examSession.correct + " / " + EXAM_TOTAL + "（答错 " + (EXAM_TOTAL - examSession.correct) + " 题）"
+    );
+    lines.push("");
+    const wrongs = examRecords.filter(function (r) {
+      return !r.ok;
+    });
+    lines.push("## 错题明细");
+    lines.push("");
+    if (!wrongs.length) {
+      lines.push("（本场无错题）");
+    } else {
+      wrongs.forEach(function (r) {
+        lines.push(
+          "- 第 " +
+            (r.n || "?") +
+            " 题：错选「" +
+            (r.picked || "") +
+            "」；正确「" +
+            (r.item && r.item.title ? r.item.title : "") +
+            "」"
+        );
+      });
+    }
+    lines.push("");
+    lines.push("## 全部答题回顾");
+    lines.push("");
+    examRecords.forEach(function (r) {
+      lines.push(
+        "- 第 " +
+          (r.n || "?") +
+          " 题 " +
+          (r.ok ? "✓" : "✗") +
+          " — 所选「" +
+          (r.picked || "") +
+          "」；正确「" +
+          (r.item && r.item.title ? r.item.title : "") +
+          "」"
+      );
+    });
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+    lines.push("*内容由本站导出，仅供个人复习；模型讲解请参见站内智能讲解。*");
+
+    const text = lines.join("\n");
+    const stamp = new Date().toISOString().slice(0, 10);
+    const safe = "微生物菌落图谱-本场考试-" + stamp + ".md";
+    try {
+      const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = safe;
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      showToast("已下载错题本（Markdown）", 2000);
+    } catch (e) {
+      showToast("导出失败", 2200);
+    }
+  }
+
+  function getDefaultTeacherPin() {
+    try {
+      const w = window.__MICROBE_TEACHER_PIN__;
+      if (typeof w === "string" && w.length) return w;
+    } catch (e) {
+      /* ignore */
+    }
+    return "123456";
+  }
+
+  function getTeacherPinForVerify() {
+    try {
+      const s = localStorage.getItem(TEACHER_PIN_STORAGE_KEY);
+      if (typeof s === "string" && s.length) return s;
+    } catch (e) {
+      /* ignore */
+    }
+    return getDefaultTeacherPin();
+  }
+
+  function loadExamScoresFromStorage() {
+    try {
+      const raw = localStorage.getItem(EXAM_SCORES_STORAGE_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveExamScoresToStorage(arr) {
+    localStorage.setItem(EXAM_SCORES_STORAGE_KEY, JSON.stringify(arr));
+  }
+
+  function loadExamStudentLabelIntoUi() {
+    if (!el.examStudentId) return;
+    try {
+      const s = localStorage.getItem(EXAM_STUDENT_LABEL_STORAGE_KEY);
+      el.examStudentId.value = s && typeof s === "string" ? s : "";
+    } catch (e) {
+      el.examStudentId.value = "";
+    }
+  }
+
+  function saveExamStudentLabelToStorage() {
+    if (!el.examStudentId) return;
+    try {
+      const v = String(el.examStudentId.value || "").trim();
+      if (v) {
+        localStorage.setItem(EXAM_STUDENT_LABEL_STORAGE_KEY, v);
+      } else {
+        localStorage.removeItem(EXAM_STUDENT_LABEL_STORAGE_KEY);
+      }
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function persistExamScoreAfterSubmit() {
+    const labelRaw = el.examStudentId
+      ? String(el.examStudentId.value || "").trim()
+      : "";
+    saveExamStudentLabelToStorage();
+    const studentLabel = labelRaw || "（未填写）";
+    const wrongTitles = examRecords
+      .filter(function (r) {
+        return !r.ok;
+      })
+      .map(function (r) {
+        return r.item && r.item.title ? String(r.item.title) : "";
+      })
+      .filter(Boolean);
+    const rec = {
+      id:
+        "s" +
+        Date.now() +
+        "-" +
+        Math.random().toString(36).slice(2, 10),
+      ts: Date.now(),
+      studentLabel: studentLabel,
+      correct: examSession.correct,
+      total: EXAM_TOTAL,
+      wrongCount: EXAM_TOTAL - examSession.correct,
+      wrongTitles: wrongTitles,
+    };
+    try {
+      const arr = loadExamScoresFromStorage();
+      arr.push(rec);
+      saveExamScoresToStorage(arr);
+      showToast("本场成绩已记入本机", 2000);
+      if (scoreBoardViewUnlocked && el.scoreBoardDrawer && !el.scoreBoardDrawer.classList.contains("hidden")) {
+        renderScoreBoardTable();
+      }
+    } catch (e) {
+      showToast("成绩保存失败（本机存储已满或不可用）", 2600);
+    }
+  }
+
+  function setScoreBoardDrawer(open) {
+    if (!el.scoreBoardDrawer) return;
+    if (!open) {
+      el.scoreBoardDrawer.classList.add("hidden");
+      el.scoreBoardDrawer.setAttribute("aria-hidden", "true");
+      return;
+    }
+    if (open && el.featureDrawer) {
+      featureDrawerOpen = false;
+      el.featureDrawer.classList.add("hidden");
+      el.featureDrawer.setAttribute("aria-hidden", "true");
+    }
+    if (open && el.chatDrawer) {
+      chatDrawerOpen = false;
+      el.chatDrawer.classList.add("hidden");
+      el.chatDrawer.setAttribute("aria-hidden", "true");
+    }
+    if (open && el.examDrawer) {
+      examDrawerOpen = false;
+      el.examDrawer.classList.add("hidden");
+      el.examDrawer.setAttribute("aria-hidden", "true");
+    }
+    el.scoreBoardDrawer.classList.remove("hidden");
+    el.scoreBoardDrawer.setAttribute("aria-hidden", "false");
+    if (open) {
+      if (el.scoreBoardPinError) {
+        el.scoreBoardPinError.classList.add("hidden");
+        el.scoreBoardPinError.textContent = "";
+      }
+      if (scoreBoardViewUnlocked && el.scoreBoardGate && el.scoreBoardMain) {
+        el.scoreBoardGate.classList.add("hidden");
+        el.scoreBoardMain.classList.remove("hidden");
+        renderScoreBoardTable();
+      } else if (el.scoreBoardGate && el.scoreBoardMain) {
+        el.scoreBoardGate.classList.remove("hidden");
+        el.scoreBoardMain.classList.add("hidden");
+        if (el.scoreBoardPin) el.scoreBoardPin.value = "";
+      }
+      setTimeout(function () {
+        if (scoreBoardViewUnlocked && el.scoreBoardFilter) {
+          el.scoreBoardFilter.focus();
+        } else if (el.scoreBoardPin) {
+          el.scoreBoardPin.focus();
+        }
+      }, 0);
+    }
+  }
+
+  function tryUnlockScoreBoard() {
+    const pin = el.scoreBoardPin ? String(el.scoreBoardPin.value || "").trim() : "";
+    const ok = pin === getTeacherPinForVerify();
+    if (!ok) {
+      if (el.scoreBoardPinError) {
+        el.scoreBoardPinError.textContent = "密码不正确";
+        el.scoreBoardPinError.classList.remove("hidden");
+      }
+      return;
+    }
+    scoreBoardViewUnlocked = true;
+    if (el.scoreBoardPinError) {
+      el.scoreBoardPinError.classList.add("hidden");
+      el.scoreBoardPinError.textContent = "";
+    }
+    if (el.scoreBoardGate) el.scoreBoardGate.classList.add("hidden");
+    if (el.scoreBoardMain) el.scoreBoardMain.classList.remove("hidden");
+    renderScoreBoardTable();
+    if (el.scoreBoardFilter) {
+      setTimeout(function () {
+        el.scoreBoardFilter.focus();
+      }, 0);
+    }
+  }
+
+  function lockScoreBoardView() {
+    scoreBoardViewUnlocked = false;
+    if (el.scoreBoardGate) el.scoreBoardGate.classList.remove("hidden");
+    if (el.scoreBoardMain) el.scoreBoardMain.classList.add("hidden");
+    if (el.scoreBoardPin) el.scoreBoardPin.value = "";
+  }
+
+  function renderScoreBoardTable() {
+    if (!el.scoreBoardTableBody || !el.scoreBoardEmpty) return;
+    const q = el.scoreBoardFilter
+      ? String(el.scoreBoardFilter.value || "").trim().toLowerCase()
+      : "";
+    const all = loadExamScoresFromStorage().slice().sort(function (a, b) {
+      return (b.ts || 0) - (a.ts || 0);
+    });
+    const rows = q.length
+      ? all.filter(function (r) {
+          const lab = String(r.studentLabel || "").toLowerCase();
+          return lab.indexOf(q) !== -1;
+        })
+      : all;
+    el.scoreBoardTableBody.innerHTML = "";
+    if (!rows.length) {
+      el.scoreBoardEmpty.classList.remove("hidden");
+      return;
+    }
+    el.scoreBoardEmpty.classList.add("hidden");
+    rows.forEach(function (r) {
+      const tr = document.createElement("tr");
+      const td0 = document.createElement("td");
+      td0.textContent = r.ts
+        ? new Date(r.ts).toLocaleString("zh-CN")
+        : "—";
+      const td1 = document.createElement("td");
+      td1.textContent = r.studentLabel != null ? String(r.studentLabel) : "—";
+      const td2 = document.createElement("td");
+      td2.textContent =
+        String(r.correct != null ? r.correct : "") + " / " + String(r.total || EXAM_TOTAL);
+      const td3 = document.createElement("td");
+      td3.textContent = String(r.wrongCount != null ? r.wrongCount : "");
+      tr.appendChild(td0);
+      tr.appendChild(td1);
+      tr.appendChild(td2);
+      tr.appendChild(td3);
+      el.scoreBoardTableBody.appendChild(tr);
+    });
+  }
+
+  function exportScoresJsonFile() {
+    const arr = loadExamScoresFromStorage();
+    const text = JSON.stringify(arr, null, 2);
+    const stamp = new Date().toISOString().slice(0, 10);
+    try {
+      const blob = new Blob([text], { type: "application/json;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "微生物菌落图谱-成绩记录-" + stamp + ".json";
+      a.rel = "noopener";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+      showToast("已导出成绩 JSON", 2000);
+    } catch (e) {
+      showToast("导出失败", 2200);
+    }
+  }
+
+  function mergeImportedScores(parsed) {
+    if (!Array.isArray(parsed)) throw new Error("格式须为 JSON 数组");
+    const existing = loadExamScoresFromStorage();
+    const ids = new Set(
+      existing.map(function (x) {
+        return x && x.id;
+      })
+    );
+    let added = 0;
+    parsed.forEach(function (item) {
+      if (!item || typeof item !== "object") return;
+      let id = item.id;
+      if (id && ids.has(id)) return;
+      if (!id) {
+        id = "i" + Date.now() + "-" + Math.random().toString(36).slice(2, 8);
+        item.id = id;
+      }
+      if (ids.has(id)) return;
+      ids.add(id);
+      existing.push(item);
+      added += 1;
+    });
+    saveExamScoresToStorage(existing);
+    return added;
+  }
+
+  function clearAllExamScores() {
+    try {
+      localStorage.removeItem(EXAM_SCORES_STORAGE_KEY);
+    } catch (e) {
+      /* ignore */
+    }
+    renderScoreBoardTable();
+    showToast("已清空本机成绩记录", 2200);
   }
 
   function renderExamScoreLine() {
@@ -871,6 +1299,7 @@
     examQueue = shuffleArrayCopy(deck).slice(0, EXAM_TOTAL);
     examIndex = 0;
     showCurrentExamQuestion();
+    loadExamStudentLabelIntoUi();
   }
 
   function buildExamWrongChatPrompt(rec) {
@@ -968,19 +1397,21 @@
       p.className = "exam-results-summary";
       p.textContent = "没有错题，全部答对。";
       el.examWrongList.appendChild(p);
-      return;
-    }
-    const h = document.createElement("p");
-    h.className = "exam-results-summary";
-    h.style.marginBottom = "0.25rem";
-    h.textContent = "答错的题：";
-    el.examWrongList.appendChild(h);
-    wrongs.forEach(function (rec) {
+    } else {
+      const h = document.createElement("p");
+      h.className = "exam-results-summary";
+      h.style.marginBottom = "0.25rem";
+      h.textContent = "答错的题：";
+      el.examWrongList.appendChild(h);
+      wrongs.forEach(function (rec) {
       const card = document.createElement("div");
       card.className = "exam-wrong-card";
       const img = document.createElement("img");
       img.className = "exam-wrong-thumb";
-      img.alt = "";
+      img.alt =
+        rec.item && rec.item.title
+          ? "菌落图：" + String(rec.item.title)
+          : "菌落图";
       img.src = rec.item.image;
       const body = document.createElement("div");
       body.className = "exam-wrong-body";
@@ -999,6 +1430,7 @@
       btnChat.type = "button";
       btnChat.className = "nav-btn";
       btnChat.textContent = "智能讲解";
+      btnChat.setAttribute("aria-label", "智能讲解该错题");
       btnChat.addEventListener("click", function () {
         openStudyChatFromExamWrong(rec);
       });
@@ -1008,6 +1440,8 @@
       card.appendChild(actions);
       el.examWrongList.appendChild(card);
     });
+    }
+    renderExamLearningSummary();
   }
 
   function submitExamRun() {
@@ -1020,6 +1454,7 @@
     if (el.btnExamSubmit) el.btnExamSubmit.disabled = true;
     showExamResultsUi();
     renderExamResultsReport();
+    persistExamScoreAfterSubmit();
   }
 
   function resetExamSession() {
@@ -1051,6 +1486,10 @@
   }
 
   function setExamDrawer(open) {
+    if (open && el.scoreBoardDrawer) {
+      el.scoreBoardDrawer.classList.add("hidden");
+      el.scoreBoardDrawer.setAttribute("aria-hidden", "true");
+    }
     if (open && el.featureDrawer) {
       featureDrawerOpen = false;
       el.featureDrawer.classList.add("hidden");
@@ -1075,6 +1514,7 @@
       if (canResumePlaying) {
         showExamPlayUi();
         showCurrentExamQuestion();
+        loadExamStudentLabelIntoUi();
         syncFeaturePanelButton();
       } else if (canResumeResults) {
         showExamResultsUi();
@@ -1091,19 +1531,17 @@
   function refreshChatChrome() {
     populateChatSettingsForm();
     const direct = isDeepseekDirectMode();
-    const workerUrl = getWorkerProxyUrl();
     if (el.chatApiHint) {
       if (chatCanSend()) {
         el.chatApiHint.classList.add("hidden");
         el.chatApiHint.textContent = "";
       } else if (direct) {
         el.chatApiHint.classList.remove("hidden");
-        el.chatApiHint.textContent =
-          "直连模式：请填写并保存 DeepSeek 的 API 密钥。若保存后仍无法对话，可能是浏览器跨域限制，需改用「自建代理」。";
+        el.chatApiHint.textContent = "请填写并保存密钥。";
       } else {
         el.chatApiHint.classList.remove("hidden");
         el.chatApiHint.textContent =
-          "尚未配置代理地址：在下方选择「自建代理」并填写 Worker 的 HTTPS 地址，或由管理员配置 js/chat-config.js。";
+          "请填写并保存代理地址（或由管理员配置 js/chat-config.js）。";
       }
     }
     refreshChatActionState();
@@ -1383,12 +1821,7 @@
 
   async function testChatConnection() {
     if (!chatCanSend()) {
-      showToast(
-        isDeepseekDirectMode()
-          ? "直连模式请先填写并保存 API 密钥"
-          : "请先填写并保存自建代理的 HTTPS 地址",
-        2400
-      );
+      showToast("请先填写并保存地址或密钥", 2200);
       return;
     }
     if (chatSending || chatTesting) return;
@@ -1420,12 +1853,7 @@
 
   async function sendChat() {
     if (!chatCanSend()) {
-      showToast(
-        isDeepseekDirectMode()
-          ? "直连模式请先填写并保存 API 密钥"
-          : "请先填写并保存自建代理的 HTTPS 地址",
-        2400
-      );
+      showToast("请先填写并保存地址或密钥", 2200);
       return;
     }
     const raw = el.chatInput ? String(el.chatInput.value || "").trim() : "";
@@ -2228,6 +2656,106 @@
         setExamDrawer(true);
       });
     }
+    if (el.btnScoreBoard) {
+      el.btnScoreBoard.addEventListener("click", function () {
+        setScoreBoardDrawer(true);
+      });
+    }
+    if (el.btnScoreBoardClose) {
+      el.btnScoreBoardClose.addEventListener("click", function () {
+        setScoreBoardDrawer(false);
+      });
+    }
+    if (el.scoreBoardBackdrop) {
+      el.scoreBoardBackdrop.addEventListener("click", function () {
+        setScoreBoardDrawer(false);
+      });
+    }
+    if (el.btnScoreBoardUnlock) {
+      el.btnScoreBoardUnlock.addEventListener("click", function () {
+        tryUnlockScoreBoard();
+      });
+    }
+    if (el.scoreBoardPin) {
+      el.scoreBoardPin.addEventListener("keydown", function (e) {
+        if (e.code === "Enter") {
+          e.preventDefault();
+          tryUnlockScoreBoard();
+        }
+      });
+    }
+    if (el.scoreBoardFilter) {
+      el.scoreBoardFilter.addEventListener("input", function () {
+        renderScoreBoardTable();
+      });
+    }
+    if (el.btnScoreBoardExport) {
+      el.btnScoreBoardExport.addEventListener("click", function () {
+        exportScoresJsonFile();
+      });
+    }
+    if (el.btnScoreBoardImport && el.scoreBoardFile) {
+      el.btnScoreBoardImport.addEventListener("click", function () {
+        el.scoreBoardFile.click();
+      });
+      el.scoreBoardFile.addEventListener("change", function () {
+        const f = el.scoreBoardFile.files && el.scoreBoardFile.files[0];
+        el.scoreBoardFile.value = "";
+        if (!f) return;
+        const reader = new FileReader();
+        reader.onload = function () {
+          try {
+            const parsed = JSON.parse(String(reader.result || "[]"));
+            const n = mergeImportedScores(parsed);
+            renderScoreBoardTable();
+            showToast("已合并 " + n + " 条新记录", 2200);
+          } catch (err) {
+            showToast("导入失败：文件格式需为 JSON 数组", 2600);
+          }
+        };
+        reader.onerror = function () {
+          showToast("无法读取文件", 2200);
+        };
+        reader.readAsText(f, "UTF-8");
+      });
+    }
+    if (el.btnScoreBoardClear) {
+      el.btnScoreBoardClear.addEventListener("click", function () {
+        if (!window.confirm("确定清空本机全部成绩记录？此操作不可撤销。")) {
+          return;
+        }
+        clearAllExamScores();
+      });
+    }
+    if (el.btnScoreBoardLock) {
+      el.btnScoreBoardLock.addEventListener("click", function () {
+        lockScoreBoardView();
+        showToast("已退出教师视图", 1800);
+      });
+    }
+    if (el.btnTeacherPinSave) {
+      el.btnTeacherPinSave.addEventListener("click", function () {
+        const np = el.teacherPinNew
+          ? String(el.teacherPinNew.value || "").trim()
+          : "";
+        if (np.length < 4) {
+          showToast("新密码至少 4 个字符", 2200);
+          return;
+        }
+        try {
+          localStorage.setItem(TEACHER_PIN_STORAGE_KEY, np);
+          if (el.teacherPinNew) el.teacherPinNew.value = "";
+          showToast("教师密码已保存到本机", 2200);
+        } catch (e) {
+          showToast("无法保存", 2200);
+        }
+      });
+    }
+    if (el.examStudentId) {
+      el.examStudentId.addEventListener("blur", function () {
+        saveExamStudentLabelToStorage();
+      });
+    }
     if (el.btnExamClose) {
       el.btnExamClose.addEventListener("click", function () {
         setExamDrawer(false);
@@ -2251,6 +2779,19 @@
     if (el.btnExamAgain) {
       el.btnExamAgain.addEventListener("click", function () {
         startExamRun();
+      });
+    }
+    if (el.btnExamExportWrong) {
+      el.btnExamExportWrong.addEventListener("click", function () {
+        exportExamWrongMarkdown();
+      });
+    }
+    if (el.chatQuickPrompts) {
+      el.chatQuickPrompts.addEventListener("click", function (e) {
+        const btn = e.target && e.target.closest ? e.target.closest(".chat-quick-btn") : null;
+        if (!btn || !el.chatQuickPrompts.contains(btn)) return;
+        const key = btn.getAttribute("data-template");
+        if (key) applyChatQuickTemplate(key);
       });
     }
     if (el.btnExamReset) {
@@ -2314,16 +2855,6 @@
     if (el.btnChatClear) {
       el.btnChatClear.addEventListener("click", function () {
         clearChatHistory();
-      });
-    }
-    if (el.chatModeWorker) {
-      el.chatModeWorker.addEventListener("change", function () {
-        if (el.chatModeWorker.checked) persistChatModeFromUi();
-      });
-    }
-    if (el.chatModeDirect) {
-      el.chatModeDirect.addEventListener("change", function () {
-        if (el.chatModeDirect.checked) persistChatModeFromUi();
       });
     }
     if (el.btnChatSettingSave) {
@@ -2439,6 +2970,15 @@
 
     document.addEventListener("keydown", function (e) {
       if (e.isComposing) return;
+      if (
+        e.code === "Escape" &&
+        el.scoreBoardDrawer &&
+        !el.scoreBoardDrawer.classList.contains("hidden")
+      ) {
+        e.preventDefault();
+        setScoreBoardDrawer(false);
+        return;
+      }
       if (e.code === "Escape" && examDrawerOpen) {
         e.preventDefault();
         setExamDrawer(false);
