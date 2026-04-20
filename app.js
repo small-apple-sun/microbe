@@ -3,6 +3,7 @@
 
   const DATA_URL = "data/slides.json";
   const INTROS_URL = "data/microbe_intros.json";
+  const CHINET_RESISTANCE_URL = "data/chinet_resistance_2025.json";
   const ALT_QUIZ_HIDDEN = "菌落图（测验模式，名称已隐藏）";
   const SEARCH_STORAGE_KEY = "microbeColonyAtlas_nameSearch";
   const REVIEW_STORAGE_KEY = "microbeColonyAtlas_needReview";
@@ -133,6 +134,9 @@
   /** 按菌名（与 slides 中 title 一致）索引的简介文案 */
   /** @type {Record<string, string>} */
   let introsByTitle = {};
+  /** 按菌名索引的 CHINET 2025 耐药率结构化摘要 */
+  /** @type {Record<string, {n?:number,highlights?:string[],rates?:Array<{drug:string,resistance:number}>,notes?:string[]}>} */
+  let resistanceByTitle = {};
 
   /** 全集 */
   /** @type {{id:string,title:string,image:string,about?:string}[]} */
@@ -508,6 +512,7 @@
       "4）内容仅供参观与教学辅助，不能替代实验室规范操作、药敏与临床诊疗；涉及用药或治疗方案时仅作原则性提醒并建议由医生评估。",
       "5）若不是测验未揭晓，请尽量按以下格式输出：先写一段「【本站资料】」总结当前图谱条目与已提供片段；再写一段「【通用补充】」补充背景知识。若某段暂无内容，也请保留标题并写「暂无额外补充」。",
       "6）使用简体中文，条理清晰，避免过长列表。",
+      "7）当用户明确询问治疗指南/抗感染方案时，仅输出专业指南化内容：分点写「适应场景、经验治疗、目标治疗、疗程与复评、特殊人群与警示」，不要闲聊，不写与治疗无关内容。",
       "",
       "【资料片段】",
       rag,
@@ -704,20 +709,108 @@
     }
   }
 
-  /** 题型化快捷提问模板（填入输入框，由用户发送） */
+  function normalizeSpeciesNameForResistance(rawTitle) {
+    var raw = String(rawTitle || "").trim();
+    if (!raw) return "";
+    return raw
+      .replace(/粘/g, "黏")
+      .replace(/沙门菌$/g, "沙门氏菌")
+      .replace(/沙门氏菌属/g, "沙门氏菌");
+  }
+
+  function getResistanceProfileForTitle(title) {
+    var raw = String(title || "").trim();
+    if (!raw) return null;
+    var normalized = normalizeSpeciesNameForResistance(raw);
+    return resistanceByTitle[raw] || resistanceByTitle[normalized] || null;
+  }
+
+  function getResistanceSummaryForTitle(title) {
+    var profile = getResistanceProfileForTitle(title);
+    if (!profile) return "";
+    var parts = [];
+    if (typeof profile.n === "number" && profile.n > 0) {
+      parts.push("样本量：" + profile.n + " 株");
+    }
+    if (Array.isArray(profile.highlights) && profile.highlights.length) {
+      parts.push("要点：" + profile.highlights.slice(0, 2).join("；"));
+    }
+    if (Array.isArray(profile.rates) && profile.rates.length) {
+      var topRates = profile.rates.slice(0, 6).map(function (r) {
+        return String(r.drug || "") + " " + String(r.resistance) + "%";
+      });
+      parts.push("关键耐药率：" + topRates.join("；"));
+    }
+    if (Array.isArray(profile.notes) && profile.notes.length) {
+      parts.push("备注：" + profile.notes.join(" "));
+    }
+    return parts.join("。");
+  }
+
+  function formatResistanceQuickOutput(title, profile) {
+    if (!profile) return "";
+    var lines = [];
+    var t = String(title || "").trim() || "当前菌株";
+    lines.push(t + " · 耐药率速览（CHINET 2025）");
+    lines.push("");
+    if (typeof profile.n === "number" && profile.n > 0) {
+      lines.push("样本量：" + profile.n + " 株");
+      lines.push("");
+    }
+    if (Array.isArray(profile.highlights) && profile.highlights.length) {
+      lines.push("要点：" + profile.highlights.join("；"));
+      lines.push("");
+    }
+    var rows = Array.isArray(profile.rates) ? profile.rates : [];
+    rows.slice(0, 8).forEach(function (r) {
+      lines.push("- " + String(r.drug || "") + "：耐药率 " + String(r.resistance) + "%");
+    });
+    if (Array.isArray(profile.notes) && profile.notes.length) {
+      lines.push("");
+      lines.push("备注：" + profile.notes.join(" "));
+    }
+    return lines.join("\n");
+  }
+
   var CHAT_QUICK_TEMPLATES = {
     jianbie:
       "请根据本站【当前图谱条目】的文字资料，列出该菌落形态的鉴别要点（肉眼可见特征），并指出易混淆项及区分思路。资料未写明的内容请勿臆测。",
     hunxiao:
       "请结合本站资料，将当前菌种与常见易混菌从菌落形态（大小、色素、溶血、边缘等）作对比，分条说明。未收录于本站资料的内容请标明为通识补充。",
     fuxi: "请用简洁的要点列表总结当前条目的复习要点，便于考前快速回顾。",
+    naiyao:
+      "请结合本站上下文中的【CHINET 2025耐药率摘要】，总结该菌主要耐药特征、临床常见高耐药药物与相对保留活性的药物类别，并给出1段教学场景的用药认知提醒（非处方建议）。",
   };
 
   function applyChatQuickTemplate(templateKey) {
-    const t = CHAT_QUICK_TEMPLATES[templateKey];
+    var t = CHAT_QUICK_TEMPLATES[templateKey];
     if (!t || !el.chatInput) return;
-    if (!getCurrentItem()) {
+    const it = getCurrentItem();
+    if (!it) {
       showToast("请先浏览一张菌落图，再使用快捷提问。", 2400);
+      return;
+    }
+    if (templateKey === "naiyao") {
+      var profile = getResistanceProfileForTitle(it.title);
+      if (!profile) {
+        setChatDrawer(true);
+        chatHistory.push({
+          role: "assistant",
+          content:
+            String(it.title || "当前菌株") +
+            " · 耐药率速览（CHINET 2025）\n\n当前结构化库暂无该菌株数据，可继续提问通用耐药学习要点。",
+        });
+        chatHistory = chatHistory.slice(-24);
+        renderChatMessages();
+        return;
+      }
+      setChatDrawer(true);
+      chatHistory.push({
+        role: "assistant",
+        content: formatResistanceQuickOutput(it.title, profile),
+      });
+      chatHistory = chatHistory.slice(-24);
+      renderChatMessages();
       return;
     }
     el.chatInput.value = t;
@@ -1694,7 +1787,30 @@
     el.chatMessages.scrollTop = el.chatMessages.scrollHeight;
   }
 
-  function buildChatRagForRequest() {
+  function isTreatmentGuideQuestion(text) {
+    var q = String(text || "").toLowerCase();
+    if (!q) return false;
+    var keys = [
+      "治疗",
+      "用药",
+      "抗感染",
+      "抗菌",
+      "指南",
+      "方案",
+      "给药",
+      "疗程",
+      "首选",
+      "二线",
+      "经验治疗",
+      "目标治疗",
+    ];
+    return keys.some(function (k) {
+      return q.indexOf(k) !== -1;
+    });
+  }
+
+  function buildChatRagForRequest(userQuestion) {
+    var treatmentModeOn = isTreatmentGuideQuestion(userQuestion);
     if (hideAnswer()) {
       return (
         "【测验模式·未揭晓】用户正在使用本图谱的测验模式浏览一张菌落平板图，尚未点击显示答案。" +
@@ -1707,13 +1823,20 @@
       return "【当前无选中条目】用户可能在浏览空列表或加载中。";
     }
     const intro = introTextForItem(it);
+    const resistanceSummary = getResistanceSummaryForTitle(it.title);
+    const styleGuard = treatmentModeOn
+      ? "\n【回答风格控制】\n用户正在询问治疗/用药指南。请仅输出专业治疗指南内容，并按以下结构作答：\n1）适应场景与分层（轻中重、社区/医院、耐药风险）\n2）经验治疗建议（首选与替代，药物类别级别，不写处方剂量）\n3）目标治疗建议（结合病原学与药敏调整）\n4）疗程与复评节点\n5）特殊人群与安全警示\n要求：不得闲聊，不输出与治疗无关内容。"
+      : "";
     return (
       "【当前图谱条目】编号：" +
       it.id +
       "\n菌名：" +
       it.title +
       "\n【本站收录的菌落/培养特征介绍】\n" +
-      (intro || "（该条目暂无文字介绍）")
+      (intro || "（该条目暂无文字介绍）") +
+      "\n【CHINET 2025耐药率摘要】\n" +
+      (resistanceSummary || "（当前菌名暂无对应摘要，可提示用户暂缺并给出通用学习建议）") +
+      styleGuard
     );
   }
 
@@ -1869,7 +1992,7 @@
     chatHistory = chatHistory.slice(-24);
     renderChatMessages();
     try {
-      const rag = buildChatRagForRequest();
+      const rag = buildChatRagForRequest(raw);
       const payloadMessages = chatHistory
         .filter(function (m) {
           return m.role === "user" || m.role === "assistant";
@@ -2502,6 +2625,48 @@
     return out;
   }
 
+  function normalizeResistanceMap(raw) {
+    if (!raw || typeof raw !== "object") return {};
+    var species = raw.species;
+    if (!species || typeof species !== "object" || Array.isArray(species)) {
+      return {};
+    }
+    var out = {};
+    Object.keys(species).forEach(function (k) {
+      var v = species[k];
+      if (!v || typeof v !== "object" || Array.isArray(v)) return;
+      var rates = Array.isArray(v.rates)
+        ? v.rates
+            .filter(function (r) {
+              return (
+                r &&
+                typeof r === "object" &&
+                typeof r.drug === "string" &&
+                typeof r.resistance === "number"
+              );
+            })
+            .map(function (r) {
+              return { drug: r.drug.trim(), resistance: r.resistance };
+            })
+        : [];
+      out[k] = {
+        n: typeof v.n === "number" ? v.n : undefined,
+        highlights: Array.isArray(v.highlights)
+          ? v.highlights.filter(function (x) {
+              return typeof x === "string" && x.trim();
+            })
+          : [],
+        rates: rates,
+        notes: Array.isArray(v.notes)
+          ? v.notes.filter(function (x) {
+              return typeof x === "string" && x.trim();
+            })
+          : [],
+      };
+    });
+    return out;
+  }
+
   function loadEmbedIntros() {
     try {
       var w = window;
@@ -2528,6 +2693,19 @@
       return normalizeIntroMap(await res.json());
     } catch {
       return loadEmbedIntros();
+    }
+  }
+
+  async function loadResistanceData() {
+    if (window.location.protocol === "file:") {
+      return {};
+    }
+    try {
+      const res = await fetch(CHINET_RESISTANCE_URL, { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return normalizeResistanceMap(await res.json());
+    } catch {
+      return {};
     }
   }
 
@@ -3044,9 +3222,14 @@
     if (el.randomOrder) el.randomOrder.checked = randomOrderOn;
     bindEvents();
     try {
-      const results = await Promise.all([loadData(), loadIntros()]);
+      const results = await Promise.all([
+        loadData(),
+        loadIntros(),
+        loadResistanceData(),
+      ]);
       allItems = results[0];
       introsByTitle = results[1];
+      resistanceByTitle = results[2];
       try {
         const saved = localStorage.getItem(SEARCH_STORAGE_KEY);
         if (saved && el.nameSearch) el.nameSearch.value = saved;

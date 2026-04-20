@@ -1,0 +1,192 @@
+{
+  "meta": {
+    "dataset": "CHINET中国细菌耐药监测网 2025 年监测结果",
+    "report_date": "2026-03-24",
+    "note": "以下为教学用途的结构化摘录，耐药率单位均为%。"
+  },
+  "species": {
+    "大肠埃希菌": {
+      "n": 92725,
+      "highlights": [
+        "头孢曲松和氟喹诺酮耐药率较高",
+        "碳青霉烯类耐药率较低"
+      ],
+      "rates": [
+        { "drug": "头孢曲松", "resistance": 52.2 },
+        { "drug": "环丙沙星", "resistance": 62.2 },
+        { "drug": "左氧氟沙星", "resistance": 57.9 },
+        { "drug": "亚胺培南", "resistance": 2.4 },
+        { "drug": "美罗培南", "resistance": 2.6 },
+        { "drug": "厄他培南", "resistance": 2.7 },
+        { "drug": "替加环素", "resistance": 0.5 },
+        { "drug": "黏菌素", "resistance": 2.2 }
+      ]
+    },
+    "肺炎克雷伯菌": {
+      "n": 72931,
+      "highlights": [
+        "三代头孢耐药率较高",
+        "碳青霉烯耐药率中高位"
+      ],
+      "rates": [
+        { "drug": "头孢曲松", "resistance": 39.3 },
+        { "drug": "头孢噻肟", "resistance": 42.3 },
+        { "drug": "美罗培南", "resistance": 21.9 },
+        { "drug": "亚胺培南", "resistance": 21.6 },
+        { "drug": "替加环素", "resistance": 3.1 },
+        { "drug": "黏菌素", "resistance": 4.0 },
+        { "drug": "头孢他啶-阿维巴坦", "resistance": 14.2 }
+      ],
+      "notes": [
+        "主动监测中肺炎克雷伯菌亚胺培南/美罗培南耐药率约为 16.6%/17.0%。"
+      ]
+    },
+    "金黄色葡萄球菌": {
+      "highlights": [
+        "MRSA检出率约 28.4%",
+        "糖肽类与利奈唑胺耐药率接近 0%"
+      ],
+      "rates": [
+        { "drug": "苯唑西林（MRSA）", "resistance": 100.0 },
+        { "drug": "青霉素（MRSA）", "resistance": 99.7 },
+        { "drug": "红霉素（MRSA）", "resistance": 98.7 },
+        { "drug": "克林霉素（MRSA）", "resistance": 72.9 },
+        { "drug": "左氧氟沙星（MRSA）", "resistance": 50.2 },
+        { "drug": "环丙沙星（MRSA）", "resistance": 45.3 },
+        { "drug": "复方磺胺甲噁唑（MRSA）", "resistance": 7.9 },
+        { "drug": "万古霉素", "resistance": 0.0 },
+        { "drug": "去甲万古霉素", "resistance": 0.0 },
+        { "drug": "替考拉宁", "resistance": 0.0 },
+        { "drug": "利奈唑胺", "resistance": 0.0 }
+      ]
+    },
+    "铜绿假单胞菌": {
+      "n": 41892,
+      "highlights": [
+        "碳青霉烯耐药率中等偏高",
+        "多黏菌素耐药率很低"
+      ],
+      "rates": [
+        { "drug": "亚胺培南", "resistance": 22.6 },
+        { "drug": "美罗培南", "resistance": 18.8 },
+        { "drug": "左氧氟沙星", "resistance": 20.4 },
+        { "drug": "环丙沙星", "resistance": 14.4 },
+        { "drug": "头孢他啶", "resistance": 17.7 },
+        { "drug": "黏菌素", "resistance": 1.4 },
+        { "drug": "多黏菌素B", "resistance": 0.3 }
+      ]
+    },
+    "鲍曼不动杆菌": {
+      "n": 41600,
+      "highlights": [
+        "碳青霉烯耐药率处于高位",
+        "替加环素与黏菌素保留活性较好"
+      ],
+      "rates": [
+        { "drug": "亚胺培南", "resistance": 66.0 },
+        { "drug": "美罗培南", "resistance": 66.1 },
+        { "drug": "头孢他啶", "resistance": 67.8 },
+        { "drug": "哌拉西林-他唑巴坦", "resistance": 61.7 },
+        { "drug": "替加环素", "resistance": 1.7 },
+        { "drug": "黏菌素", "resistance": 1.0 }
+      ],
+      "notes": [
+        "碳青霉烯耐药鲍曼不动杆菌（24756株）中，亚胺培南/美罗培南耐药率约 99.8%/99.7%。"
+      ]
+    },
+    "屎肠球菌": {
+      "n": 23253,
+      "highlights": [
+        "总体耐药率高于粪肠球菌",
+        "利奈唑胺耐药率仍较低"
+      ],
+      "rates": [
+        { "drug": "万古霉素", "resistance": 8.4 },
+        { "drug": "氨苄西林", "resistance": 93.7 },
+        { "drug": "环丙沙星", "resistance": 87.7 },
+        { "drug": "左氧氟沙星", "resistance": 62.1 },
+        { "drug": "利奈唑胺", "resistance": 1.0 }
+      ]
+    },
+    "粪肠球菌": {
+      "n": 18607,
+      "highlights": [
+        "总体较屎肠球菌更敏感",
+        "万古霉素耐药率较低"
+      ],
+      "rates": [
+        { "drug": "万古霉素", "resistance": 0.2 },
+        { "drug": "氨苄西林", "resistance": 35.6 },
+        { "drug": "环丙沙星", "resistance": 35.5 },
+        { "drug": "左氧氟沙星", "resistance": 35.8 },
+        { "drug": "利奈唑胺", "resistance": 4.0 }
+      ]
+    },
+    "流感嗜血杆菌": {
+      "n": 16823,
+      "highlights": [
+        "氨苄西林耐药率高",
+        "头孢曲松非敏感率低"
+      ],
+      "rates": [
+        { "drug": "氨苄西林", "resistance": 70.2 },
+        { "drug": "氨苄西林-舒巴坦", "resistance": 50.4 },
+        { "drug": "头孢呋辛", "resistance": 54.0 },
+        { "drug": "复方磺胺甲噁唑", "resistance": 60.0 },
+        { "drug": "头孢曲松（非敏感率）", "resistance": 0.9 },
+        { "drug": "左氧氟沙星（非敏感率）", "resistance": 14.0 }
+      ],
+      "notes": [
+        "β-内酰胺酶检出率约 70%。"
+      ]
+    },
+    "嗜麦芽窄食单胞菌": {
+      "n": 17052,
+      "highlights": [
+        "对头孢他啶耐药率较高",
+        "对米诺环素和复方磺胺甲噁唑保留活性较好"
+      ],
+      "rates": [
+        { "drug": "头孢他啶", "resistance": 43.0 },
+        { "drug": "头孢哌酮-舒巴坦", "resistance": 22.3 },
+        { "drug": "左氧氟沙星", "resistance": 8.4 },
+        { "drug": "复方磺胺甲噁唑", "resistance": 6.4 },
+        { "drug": "米诺环素", "resistance": 1.1 },
+        { "drug": "替加环素", "resistance": 0.6 }
+      ]
+    },
+    "沙门氏菌": {
+      "highlights": [
+        "按分型差异较大",
+        "对碳青霉烯整体耐药率低"
+      ],
+      "rates": [
+        { "drug": "氨苄西林（鼠伤寒沙门菌）", "resistance": 87.1 },
+        { "drug": "氨苄西林（肠沙门菌）", "resistance": 87.0 },
+        { "drug": "头孢曲松（鼠伤寒沙门菌）", "resistance": 30.5 },
+        { "drug": "头孢曲松（肠沙门菌）", "resistance": 34.2 },
+        { "drug": "环丙沙星（鼠伤寒沙门菌）", "resistance": 31.8 },
+        { "drug": "环丙沙星（肠沙门菌）", "resistance": 32.4 },
+        { "drug": "亚胺培南（鼠伤寒沙门菌）", "resistance": 2.7 },
+        { "drug": "亚胺培南（肠沙门菌）", "resistance": 0.3 },
+        { "drug": "美罗培南（鼠伤寒沙门菌）", "resistance": 4.3 },
+        { "drug": "美罗培南（肠沙门菌）", "resistance": 0.4 }
+      ]
+    },
+    "黏质沙雷菌": {
+      "n": 5978,
+      "highlights": [
+        "对三代头孢和喹诺酮有一定耐药",
+        "对替加环素和阿米卡星耐药率较低"
+      ],
+      "rates": [
+        { "drug": "头孢曲松", "resistance": 27.1 },
+        { "drug": "环丙沙星", "resistance": 17.0 },
+        { "drug": "左氧氟沙星", "resistance": 16.7 },
+        { "drug": "哌拉西林-他唑巴坦", "resistance": 13.1 },
+        { "drug": "替加环素", "resistance": 0.9 },
+        { "drug": "阿米卡星", "resistance": 2.6 }
+      ]
+    }
+  }
+}
