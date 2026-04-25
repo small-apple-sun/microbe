@@ -582,6 +582,26 @@
     setChatSettingTestStatus("");
   }
 
+  function isMobileViewportForChatUi() {
+    try {
+      if (window.matchMedia) {
+        return window.matchMedia("(max-width: 760px)").matches;
+      }
+    } catch (e) {
+      /* ignore */
+    }
+    return window.innerWidth <= 760;
+  }
+
+  function refreshChatSettingsVisibility() {
+    if (!el.chatDrawer || !el.chatSettings) return;
+    const hideOnMobile = isMobileViewportForChatUi() && chatCanSend();
+    el.chatDrawer.classList.toggle("chat-settings-collapsed", hideOnMobile);
+    if (hideOnMobile) {
+      el.chatSettings.open = false;
+    }
+  }
+
   function saveChatSettings() {
     const rawUrl = el.chatSettingUrl
       ? String(el.chatSettingUrl.value || "").trim()
@@ -608,6 +628,7 @@
       populateChatSettingsForm();
       showToast("已保存", 1800);
       refreshChatChrome();
+      refreshChatSettingsVisibility();
     } catch (e) {
       showToast("无法写入本地存储", 2400);
     }
@@ -626,6 +647,7 @@
     populateChatSettingsForm();
     showToast("已清除", 2000);
     refreshChatChrome();
+    refreshChatSettingsVisibility();
   }
 
   function setChatDrawer(open) {
@@ -652,6 +674,7 @@
         el.chatSettings.open = true;
       }
       refreshChatChrome();
+      refreshChatSettingsVisibility();
       setTimeout(function () {
         if (!chatCanSend()) {
           if (el.chatSettingUrl && !getWorkerProxyUrl()) {
@@ -1536,6 +1559,9 @@
     if (el.chatInput) {
       el.chatInput.value = buildExamWrongChatPrompt(rec);
     }
+    window.addEventListener("resize", function () {
+      if (chatDrawerOpen) refreshChatSettingsVisibility();
+    });
     setChatDrawer(true);
   }
 
@@ -3353,6 +3379,7 @@
       index = items.length ? 0 : 0;
       revealed = initialRevealed();
       render();
+      refreshChatSettingsVisibility();
     } catch (err) {
       el.loadError.classList.remove("hidden");
       el.loadError.textContent =

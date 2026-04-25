@@ -2137,6 +2137,10 @@ body {
     max-height: 32dvh;
   }
 
+  .agent-drawer.chat-settings-collapsed .agent-settings {
+    display: none;
+  }
+
   .feature-list,
   .exam-choices,
   .score-board-table-wrap,
