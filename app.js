@@ -23,7 +23,7 @@
   const SEARCH_REBUILD_DEBOUNCE_MS = 200;
   /** 特征查询面板内筛选防抖 */
   const FEATURE_SEARCH_DEBOUNCE_MS = 200;
-  /** 测验模式下累计「会了」每满该数量触发庆贺动画 */
+  /** 连续「会了」每满该数量触发鼓励 */
   const QUIZ_CELEBRATE_EVERY = 5;
   /** 菌落识别考试：固定题量 */
   const EXAM_TOTAL = 10;
@@ -171,9 +171,9 @@
   const SWIPE_MIN_X_PX = 45;
   const SWIPE_MAX_TIME_MS = 900;
   const SWIPE_Y_RATIO = 1.3;
-  /** 测验模式下连续「会了」次数，点「不会」清零 */
+  /** 连续「会了」次数，点「不会」清零 */
   let quizKnowStreak = 0;
-  /** 测验模式下本轮累计「会了」（取消测验模式后清零） */
+  /** 本轮累计「会了」（切出测验模式后清零） */
   let quizKnowSessionTotal = 0;
   /** 全集中有多少条在复习池中（与 needReview / allItems 同步，避免每次渲染 O(n) 扫描） */
   let needReviewCountInDeck = 0;
@@ -2315,23 +2315,27 @@
     }, duration);
   }
 
-  /** 测验模式累计答对满 5、10、15… 题时播放庆贺动画 + 鼓励文案 */
+  /** 连续答对满 5、10、15… 题时播放小动画 + 鼓励文案 */
   function maybePlayQuizCelebrate() {
-    if (!quizOn()) return;
-    if (
-      quizKnowSessionTotal <= 0 ||
-      quizKnowSessionTotal % QUIZ_CELEBRATE_EVERY !== 0
-    ) {
+    if (quizKnowStreak <= 0 || quizKnowStreak % QUIZ_CELEBRATE_EVERY !== 0) {
       return;
     }
     playCelebrateAnimation();
-    showQuizCheerToast(quizKnowSessionTotal);
+    playStreakToastAnimation();
+    showQuizCheerToast(quizKnowStreak);
   }
 
-  function showQuizCheerToast(total) {
-    var openers = ["太棒啦", "真厉害", "好样的", "棒棒哒", "漂亮"];
+  function showQuizCheerToast(streak) {
+    var openers = ["太棒啦", "真厉害", "好样的", "棒棒哒", "漂亮", "节奏真稳"];
     var o = openers[Math.floor(Math.random() * openers.length)];
-    showToast(o + "！本轮已累计答对 " + total + " 题", 3200, true);
+    showToast(o + "！已连续答对 " + streak + " 题，继续保持", 3200, true);
+  }
+
+  function playStreakToastAnimation() {
+    if (!el.toast) return;
+    el.toast.classList.remove("toast--streak-pop");
+    void el.toast.offsetWidth;
+    el.toast.classList.add("toast--streak-pop");
   }
 
   function playCelebrateAnimation() {
@@ -2352,12 +2356,54 @@
     root.classList.remove("hidden");
     root.setAttribute("aria-hidden", "false");
 
-    var n = 48;
+    var n = 64;
     var i;
     var w = window.innerWidth;
     var h = window.innerHeight;
     var cx = w * 0.5;
     var cy = h * 0.38;
+    if (el.imageWrap) {
+      var rect = el.imageWrap.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        cx = rect.left + rect.width * 0.5;
+        cy = rect.top + rect.height * 0.5;
+      }
+    }
+
+    var glow = document.createElement("div");
+    glow.className = "celebrate-glow";
+    glow.setAttribute("aria-hidden", "true");
+    glow.style.left = cx + "px";
+    glow.style.top = cy + "px";
+    root.appendChild(glow);
+
+    var medal = document.createElement("div");
+    medal.className = "celebrate-medal";
+    medal.setAttribute("aria-hidden", "true");
+    medal.style.left = cx + "px";
+    medal.style.top = cy + "px";
+    medal.textContent = "连对 " + String(quizKnowStreak);
+    root.appendChild(medal);
+
+    var halo = document.createElement("div");
+    halo.className = "celebrate-halo";
+    halo.setAttribute("aria-hidden", "true");
+    halo.style.left = cx + "px";
+    halo.style.top = cy + "px";
+    root.appendChild(halo);
+
+    var filmVignette = document.createElement("div");
+    filmVignette.className = "celebrate-film-vignette";
+    filmVignette.setAttribute("aria-hidden", "true");
+    root.appendChild(filmVignette);
+
+    var lensFlare = document.createElement("div");
+    lensFlare.className = "celebrate-lens-flare";
+    lensFlare.setAttribute("aria-hidden", "true");
+    lensFlare.style.left = cx + "px";
+    lensFlare.style.top = cy + "px";
+    root.appendChild(lensFlare);
+
     for (i = 0; i < n; i += 1) {
       var p = document.createElement("span");
       p.className = "celebrate-particle";
@@ -2376,6 +2422,50 @@
       root.appendChild(p);
     }
 
+    var rayCount = 18;
+    for (i = 0; i < rayCount; i += 1) {
+      var ray = document.createElement("span");
+      ray.className = "celebrate-ray";
+      var rDeg = (360 * i) / rayCount + (Math.random() - 0.5) * 8;
+      ray.style.setProperty("--deg", rDeg.toFixed(1) + "deg");
+      ray.style.setProperty("--delay", (Math.random() * 0.1).toFixed(3) + "s");
+      ray.style.left = cx + "px";
+      ray.style.top = cy + "px";
+      root.appendChild(ray);
+    }
+
+    var cometCount = 12;
+    for (i = 0; i < cometCount; i += 1) {
+      var c = document.createElement("span");
+      c.className = "celebrate-comet";
+      var ca = (Math.PI * 2 * i) / cometCount + (Math.random() - 0.5) * 0.45;
+      var cd = 120 + Math.random() * Math.min(w, h) * 0.24;
+      var ctx = Math.cos(ca) * cd;
+      var cty = Math.sin(ca) * cd;
+      c.style.setProperty("--tx", ctx.toFixed(1) + "px");
+      c.style.setProperty("--ty", cty.toFixed(1) + "px");
+      c.style.setProperty("--delay", (Math.random() * 0.14).toFixed(3) + "s");
+      c.style.left = cx + "px";
+      c.style.top = cy + "px";
+      root.appendChild(c);
+    }
+
+    var starCount = 10;
+    for (i = 0; i < starCount; i += 1) {
+      var s = document.createElement("span");
+      s.className = "celebrate-star";
+      var sa = (Math.PI * 2 * i) / starCount + (Math.random() - 0.5) * 0.35;
+      var sd = 74 + Math.random() * Math.min(w, h) * 0.16;
+      var stx = Math.cos(sa) * sd;
+      var sty = Math.sin(sa) * sd;
+      s.style.setProperty("--tx", stx.toFixed(1) + "px");
+      s.style.setProperty("--ty", sty.toFixed(1) + "px");
+      s.style.setProperty("--delay", (Math.random() * 0.16).toFixed(3) + "s");
+      s.style.left = cx + "px";
+      s.style.top = cy + "px";
+      root.appendChild(s);
+    }
+
     var burst = document.createElement("div");
     burst.className = "celebrate-burst";
     burst.setAttribute("aria-hidden", "true");
@@ -2388,7 +2478,7 @@
       root.classList.add("hidden");
       root.setAttribute("aria-hidden", "true");
       root.innerHTML = "";
-    }, 1450);
+    }, 1800);
   }
 
   function setNavDisabled(disabled) {
