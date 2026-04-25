@@ -1880,7 +1880,7 @@ body {
   .toolbar {
     width: 100%;
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 0.45rem;
     align-items: stretch;
   }
@@ -1939,6 +1939,10 @@ body {
     grid-column: 3 / 4;
   }
 
+  #btnAgentPanel {
+    grid-column: 4 / 5;
+  }
+
   #btnFeaturePanel {
     grid-column: 1 / 2;
   }
@@ -1949,10 +1953,6 @@ body {
 
   #btnScoreBoard {
     grid-column: 3 / 4;
-  }
-
-  #btnAgentPanel {
-    grid-column: 1 / -1;
   }
 
   .counter {
