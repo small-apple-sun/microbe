@@ -2322,7 +2322,7 @@
     }
     playCelebrateAnimation();
     playStreakToastAnimation();
-    showQuizCheerToast(quizKnowStreak);
+    // 仅保留庆祝动画，不再显示底部鼓励文案
   }
 
   function showQuizCheerToast(streak) {
