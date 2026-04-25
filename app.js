@@ -4,6 +4,7 @@
   const DATA_URL = "data/slides.json";
   const INTROS_URL = "data/microbe_intros.json";
   const CHINET_RESISTANCE_URL = "data/chinet_resistance_2025.json";
+  const MAJOR_DISEASES_URL = "主要致病疾病.md";
   const ALT_QUIZ_HIDDEN = "菌落图（测验模式，名称已隐藏）";
   const SEARCH_STORAGE_KEY = "microbeColonyAtlas_nameSearch";
   const REVIEW_STORAGE_KEY = "microbeColonyAtlas_needReview";
@@ -137,6 +138,9 @@
   /** 按菌名索引的 CHINET 2025 耐药率结构化摘要 */
   /** @type {Record<string, {n?:number,highlights?:string[],rates?:Array<{drug:string,resistance:number}>,notes?:string[]}>} */
   let resistanceByTitle = {};
+  /** 按菌名索引的主要致病疾病摘要 */
+  /** @type {Record<string, string>} */
+  let majorDiseasesByTitle = {};
 
   /** 全集 */
   /** @type {{id:string,title:string,image:string,about?:string}[]} */
@@ -747,6 +751,34 @@
     return parts.join("。");
   }
 
+  function normalizeSpeciesNameForDisease(rawTitle) {
+    var raw = String(rawTitle || "").trim();
+    if (!raw) return "";
+    return raw
+      .replace(/粘/g, "黏")
+      .replace(/沙门菌$/g, "沙门氏菌")
+      .replace(/沙门氏菌属/g, "沙门氏菌");
+  }
+
+  function getMajorDiseaseForTitle(title) {
+    var raw = String(title || "").trim();
+    if (!raw) return "";
+    var normalized = normalizeSpeciesNameForDisease(raw);
+    return majorDiseasesByTitle[raw] || majorDiseasesByTitle[normalized] || "";
+  }
+
+  function formatMajorDiseaseQuickOutput(title, disease) {
+    var t = String(title || "").trim() || "当前菌株";
+    var d = String(disease || "").trim();
+    if (!d) {
+      return (
+        t +
+        " · 主要致病疾病\n\n当前结构化库暂无该菌株对应条目，可继续提问通用致病谱与临床场景。"
+      );
+    }
+    return t + " · 主要致病疾病\n\n" + d;
+  }
+
   function formatResistanceQuickOutput(title, profile) {
     if (!profile) return "";
     var lines = [];
@@ -780,6 +812,8 @@
     fuxi: "请用简洁的要点列表总结当前条目的复习要点，便于考前快速回顾。",
     naiyao:
       "请结合本站上下文中的【CHINET 2025耐药率摘要】，总结该菌主要耐药特征、临床常见高耐药药物与相对保留活性的药物类别，并给出1段教学场景的用药认知提醒（非处方建议）。",
+    jibing:
+      "请结合本站上下文中的【主要致病疾病】条目，概括该菌相关的核心临床综合征，并按系统分组（呼吸、泌尿、血流等）给出教学复习要点；若本站条目未覆盖，请明确标注“本站未收录”。",
   };
 
   function applyChatQuickTemplate(templateKey) {
@@ -793,21 +827,50 @@
     if (templateKey === "naiyao") {
       var profile = getResistanceProfileForTitle(it.title);
       if (!profile) {
+        if (!chatCanSend()) {
+          showToast("未命中本地耐药率，联网检索前请先配置并保存连接。", 2400);
+          return;
+        }
         setChatDrawer(true);
-        chatHistory.push({
-          role: "assistant",
-          content:
+        if (el.chatInput) {
+          el.chatInput.value =
+            "本站 CHINET 2025 未收录“" +
             String(it.title || "当前菌株") +
-            " · 耐药率速览（CHINET 2025）\n\n当前结构化库暂无该菌株数据，可继续提问通用耐药学习要点。",
-        });
-        chatHistory = chatHistory.slice(-24);
-        renderChatMessages();
+            "”的耐药率摘要。请联网检索最新权威来源（如 CHINET、CLSI/EUCAST 相关资料、指南或高质量综述），总结该菌耐药特征、高耐药药物、相对保留活性药物类别，并附来源列表。";
+        }
+        sendChat();
         return;
       }
       setChatDrawer(true);
       chatHistory.push({
         role: "assistant",
         content: formatResistanceQuickOutput(it.title, profile),
+      });
+      chatHistory = chatHistory.slice(-24);
+      renderChatMessages();
+      return;
+    }
+    if (templateKey === "jibing") {
+      var disease = getMajorDiseaseForTitle(it.title);
+      if (!disease) {
+        if (!chatCanSend()) {
+          showToast("未命中本地条目，联网检索前请先配置并保存连接。", 2400);
+          return;
+        }
+        setChatDrawer(true);
+        if (el.chatInput) {
+          el.chatInput.value =
+            "本站未收录“" +
+            String(it.title || "当前菌株") +
+            "”的主要致病疾病。请联网检索最新权威来源（如指南、综述或专业数据库），给出该菌主要致病疾病，并按系统分组总结，最后附来源列表。";
+        }
+        sendChat();
+        return;
+      }
+      setChatDrawer(true);
+      chatHistory.push({
+        role: "assistant",
+        content: formatMajorDiseaseQuickOutput(it.title, disease),
       });
       chatHistory = chatHistory.slice(-24);
       renderChatMessages();
@@ -1824,6 +1887,7 @@
     }
     const intro = introTextForItem(it);
     const resistanceSummary = getResistanceSummaryForTitle(it.title);
+    const majorDiseaseSummary = getMajorDiseaseForTitle(it.title);
     const styleGuard = treatmentModeOn
       ? "\n【回答风格控制】\n用户正在询问治疗/用药指南。请仅输出专业治疗指南内容，并按以下结构作答：\n1）适应场景与分层（轻中重、社区/医院、耐药风险）\n2）经验治疗建议（首选与替代，药物类别级别，不写处方剂量）\n3）目标治疗建议（结合病原学与药敏调整）\n4）疗程与复评节点\n5）特殊人群与安全警示\n要求：不得闲聊，不输出与治疗无关内容。"
       : "";
@@ -1836,6 +1900,9 @@
       (intro || "（该条目暂无文字介绍）") +
       "\n【CHINET 2025耐药率摘要】\n" +
       (resistanceSummary || "（当前菌名暂无对应摘要，可提示用户暂缺并给出通用学习建议）") +
+      "\n【主要致病疾病】\n" +
+      (majorDiseaseSummary ||
+        "（当前菌名暂无对应条目：请先说明本站未收录，再联网检索最新权威资料后作答，并列出来源）") +
       styleGuard
     );
   }
@@ -2709,6 +2776,48 @@
     }
   }
 
+  function parseMajorDiseasesMarkdown(mdText) {
+    var lines = String(mdText || "")
+      .split(/\r?\n/)
+      .map(function (line) {
+        return String(line || "").trim();
+      })
+      .filter(Boolean);
+    if (!lines.length) return {};
+    var out = {};
+    var skip = {
+      序号: true,
+      致病菌名称: true,
+      主要致病疾病: true,
+    };
+    for (var i = 0; i < lines.length; i += 1) {
+      var line = lines[i];
+      if (!line || skip[line]) continue;
+      if (!/^\d+$/.test(line)) continue;
+      var name = lines[i + 1] || "";
+      var disease = lines[i + 2] || "";
+      if (!name || !disease || skip[name] || skip[disease]) continue;
+      out[name] = disease;
+      var normalized = normalizeSpeciesNameForDisease(name);
+      if (normalized && !out[normalized]) out[normalized] = disease;
+      i += 2;
+    }
+    return out;
+  }
+
+  async function loadMajorDiseasesData() {
+    if (window.location.protocol === "file:") {
+      return {};
+    }
+    try {
+      const res = await fetch(MAJOR_DISEASES_URL, { cache: "no-store" });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      return parseMajorDiseasesMarkdown(await res.text());
+    } catch {
+      return {};
+    }
+  }
+
   function loadEmbedData() {
     if (Array.isArray(window.__COLONY_DATA__)) {
       return parseItems(window.__COLONY_DATA__);
@@ -3226,10 +3335,12 @@
         loadData(),
         loadIntros(),
         loadResistanceData(),
+        loadMajorDiseasesData(),
       ]);
       allItems = results[0];
       introsByTitle = results[1];
       resistanceByTitle = results[2];
+      majorDiseasesByTitle = results[3];
       try {
         const saved = localStorage.getItem(SEARCH_STORAGE_KEY);
         if (saved && el.nameSearch) el.nameSearch.value = saved;
