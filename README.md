@@ -36,3 +36,32 @@ cd /home/apple/microbe-colony-atlas
 ```
 
 然后打开终端输出的本地地址。
+
+### 一键部署到 GitHub Pages（SSH）
+
+已提供脚本：`deploy-pages.sh`
+
+默认参数：
+
+- 远程仓库：`git@github.com:small-apple-sun/microbe.git`
+- 分支：`main`
+- 部署目录：`/home/apple/microbe-pages-deploy-sync`
+
+执行：
+
+```bash
+cd /home/apple/microbe-colony-atlas
+./deploy-pages.sh
+```
+
+可选：自定义提交信息
+
+```bash
+./deploy-pages.sh "Update UI and celebration effects"
+```
+
+可选：临时改远程或部署目录（环境变量）
+
+```bash
+REMOTE_URL="git@github.com:your-name/your-repo.git" DEPLOY_DIR="/tmp/microbe-deploy" ./deploy-pages.sh
+```
