@@ -3928,6 +3928,22 @@ body::after {
     min-height: 44px;
   }
 
+  /* 修复移动端 toggle 被旧主题覆盖成深色底 */
+  .toolbar .toggle {
+    background: #f6f2ea;
+    border: 1px solid #dccfb4;
+    color: #2f291f;
+    box-shadow: 0 1px 2px rgba(26, 26, 26, 0.05);
+  }
+
+  .toolbar .toggle span {
+    color: #2f291f;
+  }
+
+  .toolbar .toggle input {
+    accent-color: #b8860b;
+  }
+
   .know-row {
     background: rgba(250, 250, 248, 0.95);
     border: 1px solid var(--border);
